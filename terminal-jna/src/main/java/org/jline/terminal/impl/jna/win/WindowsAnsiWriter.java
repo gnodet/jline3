@@ -88,7 +88,7 @@ public final class WindowsAnsiWriter extends AnsiWriter {
     }
 
     private void getConsoleInfo() throws IOException {
-        out.flush();
+        flush();
         Kernel32.INSTANCE.GetConsoleScreenBufferInfo(console, info);
         if( negative ) {
             info.wAttributes = invertAttributeColors(info.wAttributes);
@@ -96,7 +96,7 @@ public final class WindowsAnsiWriter extends AnsiWriter {
     }
 
     private void applyAttribute() throws IOException {
-        out.flush();
+        flush();
         short attributes = info.wAttributes;
         if( negative ) {
             attributes = invertAttributeColors(attributes);
@@ -302,7 +302,7 @@ public final class WindowsAnsiWriter extends AnsiWriter {
     protected void processRestoreCursorPosition() throws IOException {
         // restore only if there was a save operation first
         if (savedX != -1 && savedY != -1) {
-            out.flush();
+            flush();
             info.dwCursorPosition.X = savedX;
             info.dwCursorPosition.Y = savedY;
             applyCursorPosition();

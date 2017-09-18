@@ -84,7 +84,7 @@ public final class WindowsAnsiWriter extends AnsiWriter {
     }
 
     private void getConsoleInfo() throws IOException {
-        out.flush();
+        flush();
         if (GetConsoleScreenBufferInfo(console, info) == 0) {
             throw new IOException("Could not get the screen info: " + WindowsSupport.getLastErrorMessage());
         }
@@ -94,7 +94,7 @@ public final class WindowsAnsiWriter extends AnsiWriter {
     }
 
     private void applyAttribute() throws IOException {
-        out.flush();
+        flush();
         short attributes = info.attributes;
         if (negative) {
             attributes = invertAttributeColors(attributes);
@@ -335,7 +335,7 @@ public final class WindowsAnsiWriter extends AnsiWriter {
     protected void processRestoreCursorPosition() throws IOException {
         // restore only if there was a save operation first
         if (savedX != -1 && savedY != -1) {
-            out.flush();
+            flush();
             info.cursorPosition.x = savedX;
             info.cursorPosition.y = savedY;
             applyCursorPosition();

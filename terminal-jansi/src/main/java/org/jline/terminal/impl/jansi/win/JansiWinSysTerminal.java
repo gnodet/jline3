@@ -34,7 +34,7 @@ public class JansiWinSysTerminal extends AbstractWindowsTerminal {
     }
 
     public JansiWinSysTerminal(String name, int codepage, boolean nativeSignals, SignalHandler signalHandler) throws IOException {
-        super(new WindowsAnsiWriter(new BufferedWriter(new JansiWinConsoleWriter())),
+        super(new WindowsAnsiWriter(new JansiWinConsoleWriter()),
               name, codepage, nativeSignals, signalHandler);
     }
 

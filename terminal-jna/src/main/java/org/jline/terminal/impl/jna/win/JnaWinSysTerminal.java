@@ -31,7 +31,7 @@ public class JnaWinSysTerminal extends AbstractWindowsTerminal {
     }
 
     public JnaWinSysTerminal(String name, int codepage, boolean nativeSignals, SignalHandler signalHandler) throws IOException {
-        super(new WindowsAnsiWriter(new BufferedWriter(new JnaWinConsoleWriter(consoleOut)), consoleOut),
+        super(new WindowsAnsiWriter(new JnaWinConsoleWriter(consoleOut), consoleOut),
               name, codepage, nativeSignals, signalHandler);
         strings.put(InfoCmp.Capability.key_mouse, "\\E[M");
     }

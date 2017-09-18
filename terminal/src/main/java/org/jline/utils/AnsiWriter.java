@@ -15,10 +15,10 @@
  */
 package org.jline.utils;
 
-import java.io.FilterWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 
 /**
@@ -37,13 +37,17 @@ import java.util.Iterator;
  * @author Joris Kuipers
  * @since 1.0
  */
-public class AnsiWriter extends FilterWriter {
+public class AnsiWriter extends Writer {
 
     private static final char[] RESET_CODE = "\033[0m".toCharArray();
 
     public AnsiWriter(Writer out) {
-        super(out);
+        this.out = out;
     }
+
+    private Writer out;
+    private char[] writeBuffer = new char[64];
+    private int index;
 
     private final static int MAX_ESCAPE_SEQUENCE_LENGTH = 100;
     private final char[] buffer = new char[MAX_ESCAPE_SEQUENCE_LENGTH];
@@ -69,20 +73,19 @@ public class AnsiWriter extends FilterWriter {
     private static final int BEL = 7;
     private static final int SECOND_ST_CHAR = '\\';
 
-    @Override
-    public synchronized void write(int data) throws IOException {
+    private void doWrite(char data) throws IOException {
         switch (state) {
             case LOOKING_FOR_FIRST_ESC_CHAR:
                 if (data == FIRST_ESC_CHAR) {
-                    buffer[pos++] = (char) data;
+                    buffer[pos++] = data;
                     state = LOOKING_FOR_SECOND_ESC_CHAR;
                 } else {
-                    out.write(data);
+                    buffer(data);
                 }
                 break;
 
             case LOOKING_FOR_SECOND_ESC_CHAR:
-                buffer[pos++] = (char) data;
+                buffer[pos++] = data;
                 if (data == SECOND_ESC_CHAR) {
                     state = LOOKING_FOR_NEXT_ARG;
                 } else if (data == SECOND_OSC_CHAR) {
@@ -93,7 +96,7 @@ public class AnsiWriter extends FilterWriter {
                 break;
 
             case LOOKING_FOR_NEXT_ARG:
-                buffer[pos++] = (char) data;
+                buffer[pos++] = data;
                 if ('"' == data) {
                     startOfValue = pos - 1;
                     state = LOOKING_FOR_STR_ARG_END;
@@ -119,7 +122,7 @@ public class AnsiWriter extends FilterWriter {
                 break;
 
             case LOOKING_FOR_INT_ARG_END:
-                buffer[pos++] = (char) data;
+                buffer[pos++] = data;
                 if (!('0' <= data && data <= '9')) {
                     String strValue = new String(buffer, startOfValue, (pos - 1) - startOfValue);
                     Integer value = new Integer(strValue);
@@ -138,7 +141,7 @@ public class AnsiWriter extends FilterWriter {
                 break;
 
             case LOOKING_FOR_STR_ARG_END:
-                buffer[pos++] = (char) data;
+                buffer[pos++] = data;
                 if ('"' != data) {
                     String value = new String(buffer, startOfValue, (pos - 1) - startOfValue);
                     options.add(value);
@@ -151,7 +154,7 @@ public class AnsiWriter extends FilterWriter {
                 break;
 
             case LOOKING_FOR_OSC_COMMAND:
-                buffer[pos++] = (char) data;
+                buffer[pos++] = data;
                 if ('0' <= data && data <= '9') {
                     startOfValue = pos - 1;
                     state = LOOKING_FOR_OSC_COMMAND_END;
@@ -161,7 +164,7 @@ public class AnsiWriter extends FilterWriter {
                 break;
 
             case LOOKING_FOR_OSC_COMMAND_END:
-                buffer[pos++] = (char) data;
+                buffer[pos++] = data;
                 if (';' == data) {
                     String strValue = new String(buffer, startOfValue, (pos - 1) - startOfValue);
                     Integer value = new Integer(strValue);
@@ -177,7 +180,7 @@ public class AnsiWriter extends FilterWriter {
                 break;
 
             case LOOKING_FOR_OSC_PARAM:
-                buffer[pos++] = (char) data;
+                buffer[pos++] = data;
                 if (BEL == data) {
                     String value = new String(buffer, startOfValue, (pos - 1) - startOfValue);
                     options.add(value);
@@ -195,7 +198,7 @@ public class AnsiWriter extends FilterWriter {
                 break;
 
             case LOOKING_FOR_ST:
-                buffer[pos++] = (char) data;
+                buffer[pos++] = data;
                 if (SECOND_ST_CHAR == data) {
                     String value = new String(buffer, startOfValue, (pos - 2) - startOfValue);
                     options.add(value);
@@ -224,7 +227,9 @@ public class AnsiWriter extends FilterWriter {
      */
     private void reset(boolean skipBuffer) throws IOException {
         if (!skipBuffer) {
-            out.write(buffer, 0, pos);
+            for (int i = 0; i < pos; i++) {
+                buffer(buffer[i]);
+            }
         }
         pos = 0;
         startOfValue = 0;
@@ -670,7 +675,7 @@ public class AnsiWriter extends FilterWriter {
     protected void processCursorDownLine(int count) throws IOException {
         // Poor mans impl..
         for (int i = 0; i < count; i++) {
-            out.write('\n');
+            buffer('\n');
         }
     }
 
@@ -690,7 +695,7 @@ public class AnsiWriter extends FilterWriter {
     protected void processCursorRight(int count) throws IOException {
         // Poor mans impl..
         for (int i = 0; i < count; i++) {
-            out.write(' ');
+            buffer(' ');
         }
     }
 
@@ -769,19 +774,53 @@ public class AnsiWriter extends FilterWriter {
         return defaultValue;
     }
 
+    private void buffer(char c) {
+        if (index == writeBuffer.length) {
+            writeBuffer = Arrays.copyOf(writeBuffer, writeBuffer.length * 2);
+        }
+        writeBuffer[index++] = c;
+    }
+
+    private void flushBuffer() throws IOException {
+        if (index > 0) {
+            out.write(writeBuffer, 0, index);
+            index = 0;
+        }
+    }
+
+    @Override
+    public void write(int c) throws IOException {
+        synchronized (lock) {
+            doWrite((char) c);
+            flushBuffer();
+        }
+    }
+
     @Override
     public void write(char[] cbuf, int off, int len) throws IOException {
-        // TODO: Optimize this
-        for (int i = 0; i < len; i++) {
-            write(cbuf[off + i]);
+        synchronized (lock) {
+            for (int i = 0; i < len; i++) {
+                doWrite(cbuf[off + i]);
+            }
+            flushBuffer();
         }
     }
 
     @Override
     public void write(String str, int off, int len) throws IOException {
-        // TODO: Optimize this
-        for (int i = 0; i < len; i++) {
-            write(str.charAt(off + i));
+        synchronized (lock) {
+            for (int i = 0; i < len; i++) {
+                doWrite(str.charAt(off + i));
+            }
+            flushBuffer();
+        }
+    }
+
+    @Override
+    public void flush() throws IOException {
+        synchronized (lock) {
+            flushBuffer();
+            out.flush();
         }
     }
 
@@ -789,7 +828,7 @@ public class AnsiWriter extends FilterWriter {
     public void close() throws IOException {
         write(RESET_CODE);
         flush();
-        super.close();
+        out.close();
     }
 
 }
