@@ -248,6 +248,8 @@ public interface LineReader {
     String YANK_POP = "yank-pop";
     String MOUSE = "mouse";
 
+    String BEGIN_PASTE = "begin-paste";
+
     //
     // KeyMap names
     //
@@ -362,7 +364,8 @@ public interface LineReader {
         AUTO_REMOVE_SLASH(true),
         INSERT_TAB(true),
         MOUSE,
-        DISABLE_HIGHLIGHTER;
+        DISABLE_HIGHLIGHTER,
+        BRACKETED_PASTE(true);
 
         private final boolean def;
 
@@ -382,7 +385,8 @@ public interface LineReader {
     enum RegionType {
         NONE,
         CHAR,
-        LINE
+        LINE,
+        PASTE
     }
 
     /**
@@ -450,6 +454,26 @@ public interface LineReader {
      * @throws java.io.IOError in case of other i/o errors
      */
     String readLine(String prompt, String rightPrompt, Character mask, String buffer) throws UserInterruptException, EndOfFileException;
+
+    /**
+     * Read a line from the <i>in</i> {@link InputStream}, and return the line
+     * (without any trailing newlines).
+     *
+     * @param prompt      The prompt to issue to the terminal, may be null.
+     *   This is a template, with optional {@code '%'} escapes, as
+     *   described in the class header.
+     * @param rightPrompt The right prompt
+     *   This is a template, with optional {@code '%'} escapes, as
+     *   described in the class header.
+     * @param maskingCallback  The {@link MaskingCallback} to use when displaying lines and adding them to the line {@link History}
+     * @param buffer      The default value presented to the user to edit, may be null.
+     * @return            A line that is read from the terminal, can never be null.
+     *
+     * @throws UserInterruptException if readLine was interrupted (using Ctrl-C for example)
+     * @throws EndOfFileException if an EOF has been found (using Ctrl-D for example)
+     * @throws java.io.IOError in case of other i/o errors
+     */
+    String readLine(String prompt, String rightPrompt, MaskingCallback maskingCallback, String buffer) throws UserInterruptException, EndOfFileException;
 
     void callWidget(String name);
 

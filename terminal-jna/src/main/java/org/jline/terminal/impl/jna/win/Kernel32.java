@@ -78,6 +78,9 @@ interface Kernel32 extends StdCallLibrary {
     // HWND WINAPI GetConsoleWindow(void);
     Pointer GetConsoleWindow();
 
+    // UINT WINAPI GetConsoleCP(void)
+    int GetConsoleCP();
+
     // UINT WINAPI GetConsoleOutputCP(void)
     int GetConsoleOutputCP();
 
@@ -188,6 +191,10 @@ interface Kernel32 extends StdCallLibrary {
     // _In_ UINT wCodePageID);
     void SetConsoleCP(int in_wCodePageID) throws LastErrorException;
 
+    // BOOL WINAPI SetConsoleOutputCP(
+    // _In_ UINT wCodePageID);
+    void SetConsoleOutputCP(int in_wCodePageID) throws LastErrorException;
+
     // BOOL WINAPI SetConsoleCursorPosition(
     // _In_ HANDLE hConsoleOutput,
     // _In_ COORD dwCursorPosition);
@@ -230,6 +237,16 @@ interface Kernel32 extends StdCallLibrary {
                               boolean in_bAbsolute, SMALL_RECT in_lpConsoleWindow)
             throws LastErrorException;
 
+    // BOOL WINAPI WriteConsole(
+    //  _In_             HANDLE  hConsoleOutput,
+    //  _In_       const VOID    *lpBuffer,
+    //  _In_             DWORD   nNumberOfCharsToWrite,
+    //  _Out_            LPDWORD lpNumberOfCharsWritten,
+    //  _Reserved_       LPVOID  lpReserved
+    // );
+    void WriteConsoleW(Pointer in_hConsoleOutput, char[] in_lpBuffer, int in_nNumberOfCharsToWrite,
+                          IntByReference out_lpNumberOfCharsWritten, Pointer reserved_lpReserved) throws LastErrorException;
+
     // BOOL WINAPI WriteConsoleOutput(
     // _In_ HANDLE hConsoleOutput,
     // _In_ const CHAR_INFO *lpBuffer,
@@ -256,6 +273,19 @@ interface Kernel32 extends StdCallLibrary {
     void WriteConsoleOutputCharacterA(Pointer in_hConsoleOutput,
                                       byte[] in_lpCharacter, int in_nLength, COORD in_dwWriteCoord,
                                       IntByReference out_lpNumberOfCharsWritten)
+            throws LastErrorException;
+
+    // BOOL WINAPI ScrollConsoleScreenBuffer(
+    //     _In_           HANDLE     hConsoleOutput,
+    //     _In_     const SMALL_RECT *lpScrollRectangle,
+    //     _In_opt_ const SMALL_RECT *lpClipRectangle,
+    //     _In_           COORD      dwDestinationOrigin,
+    //     _In_     const CHAR_INFO  *lpFill);
+    void ScrollConsoleScreenBuffer(Pointer in_hConsoleOutput,
+                                   SMALL_RECT in_lpScrollRectangle,
+                                   SMALL_RECT in_lpClipRectangle,
+                                   COORD in_dwDestinationOrigin,
+                                   CHAR_INFO in_lpFill)
             throws LastErrorException;
 
     // typedef struct _CHAR_INFO {
@@ -490,6 +520,10 @@ interface Kernel32 extends StdCallLibrary {
     //  } SMALL_RECT;
     class SMALL_RECT extends Structure {
         public SMALL_RECT() {
+        }
+
+        public SMALL_RECT(SMALL_RECT org) {
+            this(org.Top, org.Left, org.Bottom, org.Right);
         }
 
         public SMALL_RECT(short Top, short Left, short Bottom, short Right) {

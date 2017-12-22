@@ -9,6 +9,9 @@
 package org.jline.utils;
 
 import java.util.Arrays;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -23,6 +26,7 @@ public class AttributedStringBuilder extends AttributedCharSequence implements A
     private int[] style;
     private int length;
     private int tabs = 0;
+    private int lastLineLength = 0;
     private AttributedStyle current = AttributedStyle.DEFAULT;
 
     public static AttributedString append(CharSequence... strings) {
@@ -106,15 +110,44 @@ public class AttributedStringBuilder extends AttributedCharSequence implements A
         return this;
     }
 
+    public AttributedStringBuilder style(Function<AttributedStyle,AttributedStyle> style) {
+        current = style.apply(current);
+        return this;
+    }
+
+    public AttributedStringBuilder styled(Function<AttributedStyle,AttributedStyle> style, CharSequence cs) {
+        return styled(style, sb -> sb.append(cs));
+    }
+
+    public AttributedStringBuilder styled(AttributedStyle style, CharSequence cs) {
+        return styled(s -> style, sb -> sb.append(cs));
+    }
+
+    public AttributedStringBuilder styled(Function<AttributedStyle,AttributedStyle> style, Consumer<AttributedStringBuilder> consumer) {
+        AttributedStyle prev = current;
+        current = style.apply(prev);
+        consumer.accept(this);
+        current = prev;
+        return this;
+    }
+
     public AttributedStyle style() {
         return current;
     }
 
     public AttributedStringBuilder append(AttributedString str) {
-        return append(str, 0, str.length());
+        return append((AttributedCharSequence) str, 0, str.length());
     }
 
     public AttributedStringBuilder append(AttributedString str, int start, int end) {
+        return append((AttributedCharSequence) str, start, end);
+    }
+
+    public AttributedStringBuilder append(AttributedCharSequence str) {
+        return append(str, 0, str.length());
+    }
+
+    public AttributedStringBuilder append(AttributedCharSequence str, int start, int end) {
         ensureCapacity(length + end - start);
         for (int i = start; i < end; i++) {
             char c = str.charAt(i);
@@ -125,6 +158,11 @@ public class AttributedStringBuilder extends AttributedCharSequence implements A
                 ensureCapacity(length + 1);
                 buffer[length] = c;
                 style[length] = s;
+                if (c == '\n') {
+                    lastLineLength = 0;
+                } else {
+                    lastLineLength++;
+                }
                 length++;
             }
         }
@@ -143,6 +181,10 @@ public class AttributedStringBuilder extends AttributedCharSequence implements A
     }
 
     public void appendAnsi(String ansi) {
+        ansiAppend(ansi);
+    }
+
+    public AttributedStringBuilder ansiAppend(String ansi) {
         int ansiStart = 0;
         int ansiState = 0;
         ensureCapacity(length + ansi.length());
@@ -297,27 +339,48 @@ public class AttributedStringBuilder extends AttributedCharSequence implements A
                 ensureCapacity(length + 1);
                 buffer[length] = c;
                 style[length] = this.current.getStyle();
+                if (c == '\n') {
+                    lastLineLength = 0;
+                } else {
+                    lastLineLength++;
+                }
                 length++;
             }
         }
+        return this;
     }
 
     protected void insertTab(AttributedStyle s) {
-        int nb = tabs - length % tabs;
+        int nb = tabs - lastLineLength % tabs;
         ensureCapacity(length + nb);
         for (int i = 0; i < nb; i++) {
             buffer[length] = ' ';
             style[length] = s.getStyle();
             length++;
         }
+        lastLineLength += nb;
     }
 
     public void setLength(int l) {
         length = l;
     }
 
-    public AttributedStringBuilder tabs(int tabs) {
-        this.tabs = tabs;
+    /**
+     * Set the number of spaces a tab is expanded to. Tab size cannot be changed
+     * after text has been added to prevent inconsistent indentation.
+     *
+     * If tab size is set to 0, tabs are not expanded (the default).
+     * @param tabsize Spaces per tab or 0 for no tab expansion. Must be non-negative
+     * @return
+     */
+    public AttributedStringBuilder tabs(int tabsize) {
+        if (length > 0) {
+            throw new IllegalStateException("Cannot change tab size after appending text");
+        }
+        if (tabsize < 0) {
+            throw new IllegalArgumentException("Tab size must be non negative");
+        }
+        this.tabs = tabsize;
         return this;
     }
 

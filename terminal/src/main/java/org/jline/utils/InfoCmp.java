@@ -12,6 +12,8 @@ import java.io.BufferedReader;
 import java.io.IOError;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -514,7 +516,7 @@ public final class InfoCmp {
     public static Map<String, Capability> getCapabilitiesByName() {
         Map<String, Capability> capabilities = new LinkedHashMap<>();
         try (InputStream is = InfoCmp.class.getResourceAsStream("capabilities.txt");
-             BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"))) {
+             BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
             br.lines().map(String::trim)
                     .filter(s -> !s.startsWith("#"))
                     .filter(s -> !s.isEmpty())
@@ -575,7 +577,12 @@ public final class InfoCmp {
                     int index = cap.indexOf('#');
                     String key = cap.substring(0, index);
                     String val = cap.substring(index + 1);
-                    int iVal = Integer.valueOf(val);
+                    int iVal;
+                    if (val.startsWith("0x")) {
+                        iVal = Integer.parseInt(val.substring(2), 16);
+                    } else {
+                        iVal = Integer.parseInt(val);
+                    }
                     Capability c = capsByName.get(key);
                     if (c != null) {
                         ints.put(c, iVal);
@@ -600,7 +607,7 @@ public final class InfoCmp {
 
     static String loadDefaultInfoCmp(String name) {
         try (InputStream is = InfoCmp.class.getResourceAsStream(name + ".caps");
-             BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"))) {
+             BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
             return br.lines().collect(Collectors.joining("\n", "", "\n"));
         } catch (IOException e) {
             throw new IOError(e);

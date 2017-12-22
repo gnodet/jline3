@@ -84,6 +84,22 @@ public class AttributedStringTest {
     }
 
     @Test
+    public void testBoldThenFaint() {
+        AttributedStringBuilder sb = new AttributedStringBuilder();
+        sb.styled(AttributedStyle::bold, "bold ");
+        sb.styled(AttributedStyle::faint, "faint");
+        assertEquals("\u001b[1mbold \u001b[22;2mfaint\u001b[0m", sb.toAnsi());
+    }
+
+    @Test
+    public void testBoldAndFaint() {
+        AttributedStringBuilder sb = new AttributedStringBuilder();
+        sb.styled(AttributedStyle::bold,
+                s -> s.append("bold ").styled(AttributedStyle::faint, "faint"));
+        assertEquals("\u001b[1mbold \u001b[2mfaint\u001b[0m", sb.toAnsi());
+    }
+
+    @Test
     public void test256Colors() throws IOException {
         AttributedStringBuilder sb = new AttributedStringBuilder();
         sb.style(sb.style().background(254));
@@ -91,7 +107,7 @@ public class AttributedStringTest {
         assertEquals("\033[48;5;254mHello\033[0m", sb.toAnsi(
                 new DumbTerminal("dumb", "xterm-256color",
                         new ByteArrayInputStream(new byte[0]), new ByteArrayOutputStream(),
-                        Charset.defaultCharset().name())));
+                        null)));
     }
 
     @Test

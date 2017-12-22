@@ -14,7 +14,8 @@ JLine is a Java library for handling console input. It is similar in functionali
 
 JLine 3.x is an evolution of [JLine 2.x](https://github.com/jline/jline2).
 
-[![Build Status](https://travis-ci.org/jline/jline3.svg?branch=master)](https://travis-ci.org/jline/jline3)
+[![Build Status: Linux](https://travis-ci.org/jline/jline3.svg?branch=master)](https://travis-ci.org/jline/jline3)
+[![Build Status: Windows](https://ci.appveyor.com/api/projects/status/github/jline/jline3?svg=true)](https://ci.appveyor.com/project/gnodet/jline3)
 
 # License
 
@@ -37,7 +38,7 @@ Use the following definition to use JLine in your maven project:
     <dependency>
       <groupId>org.jline</groupId>
       <artifactId>jline</artifactId>
-      <version>3.2.0</version>
+      <version>3.3.0</version>
     </dependency>
 
 JLine can also be used with more low-level jars:
@@ -45,12 +46,12 @@ JLine can also be used with more low-level jars:
     <dependency>
       <groupId>org.jline</groupId>
       <artifactId>jline-terminal</artifactId>
-      <version>3.2.0</version>
+      <version>3.3.0</version>
     </dependency>
     <dependency>
       <groupId>org.jline</groupId>
       <artifactId>jline-reader</artifactId>
-      <version>3.2.0</version>
+      <version>3.3.0</version>
     </dependency>
 
 # Building
@@ -65,4 +66,9 @@ Check out and build:
     git clone git://github.com/jline/jline3.git
     cd jline3
     mvn install
+    
+## Continuous Integration
+
+* [Travis](https://travis-ci.org/jline/jline3)
+* [AppVeyor](https://ci.appveyor.com/project/gnodet/jline3)
 

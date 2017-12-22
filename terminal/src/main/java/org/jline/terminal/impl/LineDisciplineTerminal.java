@@ -16,6 +16,7 @@ import java.io.OutputStreamWriter;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintWriter;
+import java.nio.charset.Charset;
 import java.util.Objects;
 
 import org.jline.terminal.Attributes;
@@ -26,6 +27,9 @@ import org.jline.terminal.Attributes.OutputFlag;
 import org.jline.terminal.Size;
 import org.jline.terminal.Terminal;
 import org.jline.utils.InputStreamReader;
+import org.jline.utils.NonBlocking;
+import org.jline.utils.NonBlockingInputStream;
+import org.jline.utils.NonBlockingPumpInputStream;
 import org.jline.utils.NonBlockingReader;
 
 /**
@@ -46,6 +50,21 @@ import org.jline.utils.NonBlockingReader;
  */
 public class LineDisciplineTerminal extends AbstractTerminal {
 
+    private static final String DEFAULT_TERMINAL_ATTRIBUTES =
+                    "speed 9600 baud; 24 rows; 80 columns;\n" +
+                    "lflags: icanon isig iexten echo echoe -echok echoke -echonl echoctl\n" +
+                    "\t-echoprt -altwerase -noflsh -tostop -flusho pendin -nokerninfo\n" +
+                    "\t-extproc\n" +
+                    "iflags: -istrip icrnl -inlcr -igncr ixon -ixoff ixany imaxbel iutf8\n" +
+                    "\t-ignbrk brkint -inpck -ignpar -parmrk\n" +
+                    "oflags: opost onlcr -oxtabs -onocr -onlret\n" +
+                    "cflags: cread cs8 -parenb -parodd hupcl -clocal -cstopb -crtscts -dsrflow\n" +
+                    "\t-dtrflow -mdmbuf\n" +
+                    "cchars: discard = ^O; dsusp = ^Y; eof = ^D; eol = <undef>;\n" +
+                    "\teol2 = <undef>; erase = ^?; intr = ^C; kill = ^U; lnext = ^V;\n" +
+                    "\tmin = 1; quit = ^\\; reprint = ^R; start = ^Q; status = ^T;\n" +
+                    "\tstop = ^S; susp = ^Z; time = 0; werase = ^W;\n";
+
     private static final int PIPE_SIZE = 1024;
 
     /*
@@ -61,7 +80,7 @@ public class LineDisciplineTerminal extends AbstractTerminal {
     /*
      * Slave streams
      */
-    protected final InputStream slaveInput;
+    protected final NonBlockingInputStream slaveInput;
     protected final NonBlockingReader slaveReader;
     protected final PrintWriter slaveWriter;
     protected final OutputStream slaveOutput;
@@ -75,28 +94,24 @@ public class LineDisciplineTerminal extends AbstractTerminal {
     public LineDisciplineTerminal(String name,
                                   String type,
                                   OutputStream masterOutput,
-                                  String encoding) throws IOException {
+                                  Charset encoding) throws IOException {
         this(name, type, masterOutput, encoding, SignalHandler.SIG_DFL);
     }
 
     public LineDisciplineTerminal(String name,
                                   String type,
                                   OutputStream masterOutput,
-                                  String encoding,
+                                  Charset encoding,
                                   SignalHandler signalHandler) throws IOException {
-        super(name, type, signalHandler);
-        PipedInputStream input = new PipedInputStream(PIPE_SIZE);
-        this.slaveInputPipe = new PipedOutputStream(input);
-        // This is a hack to fix a problem in gogo where closure closes
-        // streams for commands if they are instances of PipedInputStream.
-        // So we need to get around and make sure it's not an instance of
-        // that class by using a dumb FilterInputStream class to wrap it.
-        this.slaveInput = new FilterInputStream(input) {};
-        this.slaveReader = new NonBlockingReader(getName(), new InputStreamReader(slaveInput, encoding));
+        super(name, type, encoding, signalHandler);
+        NonBlockingPumpInputStream input = NonBlocking.nonBlockingPumpInputStream(PIPE_SIZE);
+        this.slaveInputPipe = input.getOutputStream();
+        this.slaveInput = input;
+        this.slaveReader = NonBlocking.nonBlocking(getName(), slaveInput, encoding());
         this.slaveOutput = new FilteringOutputStream();
-        this.slaveWriter = new PrintWriter(new OutputStreamWriter(slaveOutput, encoding));
+        this.slaveWriter = new PrintWriter(new OutputStreamWriter(slaveOutput, encoding()));
         this.masterOutput = masterOutput;
-        this.attributes = new Attributes();
+        this.attributes = ExecPty.doGetAttr(DEFAULT_TERMINAL_ATTRIBUTES);
         this.size = new Size(160, 50);
         parseInfoCmp();
     }
