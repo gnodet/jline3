@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2016, the original author or authors.
+ * Copyright (c) 2002-2018, the original author or authors.
  *
  * This software is distributable under the BSD license. See the terms of the
  * BSD license in the documentation provided with this software.
@@ -64,6 +64,12 @@ interface Kernel32 extends StdCallLibrary {
     int MOUSE_WHEELED                = 0x0004;
     int MOUSE_HWHEELED               = 0x0008;
 
+    // DWORD WINAPI WaitForSingleObject(
+    //  _In_ HANDLE hHandle,
+    //  _In_ DWORD  dwMilliseconds
+    // );
+    int WaitForSingleObject(Pointer in_hHandle, int in_dwMilliseconds);
+
     // HANDLE WINAPI GetStdHandle(
     // __in DWORD nStdHandle
     // );
@@ -77,6 +83,9 @@ interface Kernel32 extends StdCallLibrary {
 
     // HWND WINAPI GetConsoleWindow(void);
     Pointer GetConsoleWindow();
+
+    // UINT WINAPI GetConsoleCP(void)
+    int GetConsoleCP();
 
     // UINT WINAPI GetConsoleOutputCP(void)
     int GetConsoleOutputCP();
@@ -188,6 +197,10 @@ interface Kernel32 extends StdCallLibrary {
     // _In_ UINT wCodePageID);
     void SetConsoleCP(int in_wCodePageID) throws LastErrorException;
 
+    // BOOL WINAPI SetConsoleOutputCP(
+    // _In_ UINT wCodePageID);
+    void SetConsoleOutputCP(int in_wCodePageID) throws LastErrorException;
+
     // BOOL WINAPI SetConsoleCursorPosition(
     // _In_ HANDLE hConsoleOutput,
     // _In_ COORD dwCursorPosition);
@@ -230,6 +243,16 @@ interface Kernel32 extends StdCallLibrary {
                               boolean in_bAbsolute, SMALL_RECT in_lpConsoleWindow)
             throws LastErrorException;
 
+    // BOOL WINAPI WriteConsole(
+    //  _In_             HANDLE  hConsoleOutput,
+    //  _In_       const VOID    *lpBuffer,
+    //  _In_             DWORD   nNumberOfCharsToWrite,
+    //  _Out_            LPDWORD lpNumberOfCharsWritten,
+    //  _Reserved_       LPVOID  lpReserved
+    // );
+    void WriteConsoleW(Pointer in_hConsoleOutput, char[] in_lpBuffer, int in_nNumberOfCharsToWrite,
+                          IntByReference out_lpNumberOfCharsWritten, Pointer reserved_lpReserved) throws LastErrorException;
+
     // BOOL WINAPI WriteConsoleOutput(
     // _In_ HANDLE hConsoleOutput,
     // _In_ const CHAR_INFO *lpBuffer,
@@ -256,6 +279,19 @@ interface Kernel32 extends StdCallLibrary {
     void WriteConsoleOutputCharacterA(Pointer in_hConsoleOutput,
                                       byte[] in_lpCharacter, int in_nLength, COORD in_dwWriteCoord,
                                       IntByReference out_lpNumberOfCharsWritten)
+            throws LastErrorException;
+
+    // BOOL WINAPI ScrollConsoleScreenBuffer(
+    //     _In_           HANDLE     hConsoleOutput,
+    //     _In_     const SMALL_RECT *lpScrollRectangle,
+    //     _In_opt_ const SMALL_RECT *lpClipRectangle,
+    //     _In_           COORD      dwDestinationOrigin,
+    //     _In_     const CHAR_INFO  *lpFill);
+    void ScrollConsoleScreenBuffer(Pointer in_hConsoleOutput,
+                                   SMALL_RECT in_lpScrollRectangle,
+                                   SMALL_RECT in_lpClipRectangle,
+                                   COORD in_dwDestinationOrigin,
+                                   CHAR_INFO in_lpFill)
             throws LastErrorException;
 
     // typedef struct _CHAR_INFO {
@@ -391,9 +427,9 @@ interface Kernel32 extends StdCallLibrary {
         public static class EventUnion extends Union {
             public KEY_EVENT_RECORD KeyEvent;
             public MOUSE_EVENT_RECORD MouseEvent;
-             public WINDOW_BUFFER_SIZE_RECORD WindowBufferSizeEvent;
-            // MENU_EVENT_RECORD MenuEvent;
-            // FOCUS_EVENT_RECORD FocusEvent;
+            public WINDOW_BUFFER_SIZE_RECORD WindowBufferSizeEvent;
+            public MENU_EVENT_RECORD MenuEvent;
+            public FOCUS_EVENT_RECORD FocusEvent;
         }
 
         @Override
@@ -408,6 +444,12 @@ interface Kernel32 extends StdCallLibrary {
                     break;
                 case WINDOW_BUFFER_SIZE_EVENT:
                     Event.setType(WINDOW_BUFFER_SIZE_RECORD.class);
+                    break;
+                case MENU_EVENT:
+                    Event.setType(MENU_EVENT_RECORD.class);
+                    break;
+                case FOCUS_EVENT:
+                    Event.setType(MENU_EVENT_RECORD.class);
                     break;
             }
             super.read();
@@ -482,6 +524,35 @@ interface Kernel32 extends StdCallLibrary {
         }
     }
 
+    // typedef struct _MENU_EVENT_RECORD {
+    //   UINT dwCommandId;
+    // } MENU_EVENT_RECORD, *PMENU_EVENT_RECORD;
+    class MENU_EVENT_RECORD extends Structure {
+
+        public int dwCommandId;
+
+        private static String[] fieldOrder = {"dwCommandId"};
+
+        @Override
+        protected java.util.List<String> getFieldOrder() {
+            return java.util.Arrays.asList(fieldOrder);
+        }
+    }
+
+    // typedef struct _FOCUS_EVENT_RECORD {
+    //  BOOL bSetFocus;
+    //} FOCUS_EVENT_RECORD;
+    class FOCUS_EVENT_RECORD extends Structure {
+        public boolean bSetFocus;
+
+        private static String[] fieldOrder = {"bSetFocus"};
+
+        @Override
+        protected java.util.List<String> getFieldOrder() {
+            return java.util.Arrays.asList(fieldOrder);
+        }
+    }
+
     // typedef struct _SMALL_RECT {
     //    SHORT Left;
     //    SHORT Top;
@@ -490,6 +561,10 @@ interface Kernel32 extends StdCallLibrary {
     //  } SMALL_RECT;
     class SMALL_RECT extends Structure {
         public SMALL_RECT() {
+        }
+
+        public SMALL_RECT(SMALL_RECT org) {
+            this(org.Top, org.Left, org.Bottom, org.Right);
         }
 
         public SMALL_RECT(short Top, short Left, short Bottom, short Right) {

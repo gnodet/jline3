@@ -16,12 +16,14 @@ public class OSUtils {
 
     public static final boolean IS_CYGWIN = IS_WINDOWS
             && System.getenv("PWD") != null
-            && System.getenv("PWD").startsWith("/")
-            && !"cygwin".equals(System.getenv("TERM"));
+            && System.getenv("PWD").startsWith("/");
 
     public static final boolean IS_MINGW = IS_WINDOWS
             && System.getenv("MSYSTEM") != null
             && System.getenv("MSYSTEM").startsWith("MINGW");
+
+    public static final boolean IS_CONEMU = IS_WINDOWS
+            && System.getenv("ConEmuPID") != null;
 
     public static final boolean IS_OSX = System.getProperty("os.name").toLowerCase().contains("mac");
 
@@ -44,13 +46,13 @@ public class OSUtils {
             if (path != null) {
                 String[] paths = path.split(";");
                 for (String p : paths) {
-                    if (new File(p, "tty.exe").exists()) {
+                    if (tty == null && new File(p, "tty.exe").exists()) {
                         tty = new File(p, "tty.exe").getAbsolutePath();
                     }
-                    if (new File(p, "stty.exe").exists()) {
+                    if (stty == null && new File(p, "stty.exe").exists()) {
                         stty = new File(p, "stty.exe").getAbsolutePath();
                     }
-                    if (new File(p, "infocmp.exe").exists()) {
+                    if (infocmp == null && new File(p, "infocmp.exe").exists()) {
                         infocmp = new File(p, "infocmp.exe").getAbsolutePath();
                     }
                 }

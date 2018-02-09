@@ -19,19 +19,22 @@ import java.lang.reflect.Constructor;
 import com.sun.jna.Platform;
 import org.jline.terminal.Attributes;
 import org.jline.terminal.Size;
+import org.jline.terminal.impl.AbstractPty;
 import org.jline.terminal.spi.Pty;
 import org.jline.terminal.impl.jna.freebsd.FreeBsdNativePty;
 import org.jline.terminal.impl.jna.linux.LinuxNativePty;
 import org.jline.terminal.impl.jna.osx.OsXNativePty;
 import org.jline.terminal.impl.jna.solaris.SolarisNativePty;
 
-public abstract class JnaNativePty implements Pty {
+public abstract class JnaNativePty extends AbstractPty implements Pty {
 
     private final int master;
     private final int slave;
+    private final int slaveOut;
     private final String name;
     private final FileDescriptor masterFD;
     private final FileDescriptor slaveFD;
+    private final FileDescriptor slaveOutFD;
 
     public static JnaNativePty current() throws IOException {
         if (Platform.isMac()) {
@@ -62,11 +65,17 @@ public abstract class JnaNativePty implements Pty {
     }
 
     protected JnaNativePty(int master, FileDescriptor masterFD, int slave, FileDescriptor slaveFD, String name) {
+        this(master, masterFD, slave, slaveFD, slave, slaveFD, name);
+    }
+
+    protected JnaNativePty(int master, FileDescriptor masterFD, int slave, FileDescriptor slaveFD, int slaveOut, FileDescriptor slaveOutFD, String name) {
         this.master = master;
         this.slave = slave;
+        this.slaveOut = slaveOut;
         this.name = name;
         this.masterFD = masterFD;
         this.slaveFD = slaveFD;
+        this.slaveOutFD = slaveOutFD;
     }
 
     @Override
@@ -87,6 +96,10 @@ public abstract class JnaNativePty implements Pty {
         return slave;
     }
 
+    public int getSlaveOut() {
+        return slaveOut;
+    }
+
     public String getName() {
         return name;
     }
@@ -99,6 +112,10 @@ public abstract class JnaNativePty implements Pty {
         return slaveFD;
     }
 
+    public FileDescriptor getSlaveOutFD() {
+        return slaveOutFD;
+    }
+
     public InputStream getMasterInput() {
         return new FileInputStream(getMasterFD());
     }
@@ -107,12 +124,12 @@ public abstract class JnaNativePty implements Pty {
         return new FileOutputStream(getMasterFD());
     }
 
-    public InputStream getSlaveInput() {
+    protected InputStream doGetSlaveInput() {
         return new FileInputStream(getSlaveFD());
     }
 
     public OutputStream getSlaveOutput() {
-        return new FileOutputStream(getSlaveFD());
+        return new FileOutputStream(getSlaveOutFD());
     }
 
     protected static FileDescriptor newDescriptor(int fd) {

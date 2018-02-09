@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2017, the original author or authors.
+ * Copyright (c) 2002-2018, the original author or authors.
  *
  * This software is distributable under the BSD license. See the terms of the
  * BSD license in the documentation provided with this software.
@@ -27,14 +27,10 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.function.Function;
-import java.util.function.IntBinaryOperator;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.function.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -90,8 +86,22 @@ public class LineReaderImpl implements LineReader, Flushable
     public static final long   DEFAULT_BLINK_MATCHING_PAREN = 500L;
     public static final long   DEFAULT_AMBIGUOUS_BINDING = 1000L;
     public static final String DEFAULT_SECONDARY_PROMPT_PATTERN = "%M> ";
+    public static final String DEFAULT_OTHERS_GROUP_NAME = "others";
+    public static final String DEFAULT_ORIGINAL_GROUP_NAME = "original";
+    public static final String DEFAULT_COMPLETION_STYLE_STARTING = "36";    // cyan
+    public static final String DEFAULT_COMPLETION_STYLE_DESCRIPTION = "90"; // dark gray
+    public static final String DEFAULT_COMPLETION_STYLE_GROUP = "35;1";     // magenta
+    public static final String DEFAULT_COMPLETION_STYLE_SELECTION = "7";    // inverted
 
     private static final int MIN_ROWS = 3;
+
+    public static final String BRACKETED_PASTE_ON = "\033[?2004h";
+    public static final String BRACKETED_PASTE_OFF = "\033[?2004l";
+    public static final String BRACKETED_PASTE_BEGIN = "\033[200~";
+    public static final String BRACKETED_PASTE_END = "\033[201~";
+
+    public static final String FOCUS_IN_SEQ = "\033[I";
+    public static final String FOCUS_OUT_SEQ = "\033[O";
 
     /**
      * Possible states in which the current readline operation may be in.
@@ -162,7 +172,7 @@ public class LineReaderImpl implements LineReader, Flushable
     protected AttributedString prompt;
     protected AttributedString rightPrompt;
 
-    protected Character mask;
+    protected MaskingCallback maskingCallback;
 
     protected Map<Integer, String> modifiedHistory = new HashMap<>();
     protected Buffer historyBuffer = null;
@@ -370,7 +380,7 @@ public class LineReaderImpl implements LineReader, Flushable
      * Read the next line and return the contents of the buffer.
      */
     public String readLine() throws UserInterruptException, EndOfFileException {
-        return readLine(null, null, null, null);
+        return readLine(null, null, (MaskingCallback) null, null);
     }
 
     /**
@@ -382,7 +392,7 @@ public class LineReaderImpl implements LineReader, Flushable
     }
 
     public String readLine(String prompt) throws UserInterruptException, EndOfFileException {
-        return readLine(prompt, null, null, null);
+        return readLine(prompt, null, (MaskingCallback) null, null);
     }
 
     /**
@@ -418,10 +428,14 @@ public class LineReaderImpl implements LineReader, Flushable
      *                  was pressed).
      */
     public String readLine(String prompt, String rightPrompt, Character mask, String buffer) throws UserInterruptException, EndOfFileException {
-        // prompt may be null
-        // mask may be null
-        // buffer may be null
+        return readLine(prompt, rightPrompt, mask != null ? new SimpleMaskingCallback(mask) : null, buffer);
+    }
 
+    public String readLine(String prompt, String rightPrompt, MaskingCallback maskingCallback, String buffer) throws UserInterruptException, EndOfFileException {
+        // prompt may be null
+        // maskingCallback may be null
+        // buffer may be null
+        
         Thread readLineThread = Thread.currentThread();
         SignalHandler previousIntrHandler = null;
         SignalHandler previousWinchHandler = null;
@@ -434,7 +448,7 @@ public class LineReaderImpl implements LineReader, Flushable
             }
             reading = true;
 
-            this.mask = mask;
+            this.maskingCallback = maskingCallback;
 
             /*
              * This is the accumulator for VI-mode repeat count. That is, while in
@@ -491,6 +505,8 @@ public class LineReaderImpl implements LineReader, Flushable
                     callWidget(FRESH_LINE);
                 if (isSet(Option.MOUSE))
                     terminal.trackMouse(Terminal.MouseTracking.Normal);
+                if (isSet(Option.BRACKETED_PASTE))
+                    terminal.writer().write(BRACKETED_PASTE_ON);
             } else {
                 // For dumb terminals, we need to make sure that CR are ignored
                 Attributes attr = new Attributes(originalAttributes);
@@ -530,6 +546,10 @@ public class LineReaderImpl implements LineReader, Flushable
                 count = ((repeatCount == 0) ? 1 : repeatCount) * mult;
                 // Reset undo/redo flag
                 isUndo = false;
+                // Reset region after a paste
+                if (regionActive == RegionType.PASTE) {
+                    regionActive = RegionType.NONE;
+                }
 
                 // Get executable widget
                 Buffer copy = buf.copy();
@@ -633,7 +653,7 @@ public class LineReaderImpl implements LineReader, Flushable
     @Override
     public void callWidget(String name) {
         if (!reading) {
-            throw new IllegalStateException();
+            throw new IllegalStateException("Widgets can only be called during a `readLine` call");
         }
         try {
             Widget w;
@@ -670,7 +690,7 @@ public class LineReaderImpl implements LineReader, Flushable
      * keyboard) that we want the terminal to handle immediately.
      */
     public void flush() {
-        terminal.writer().flush();
+        terminal.flush();
     }
 
     public boolean isKeyMap(String name) {
@@ -782,6 +802,12 @@ public class LineReaderImpl implements LineReader, Flushable
     }
 
     @Override
+    public LineReader variable(String name, Object value) {
+        variables.put(name, value);
+        return this;
+    }
+
+    @Override
     public Map<String, Object> getVariables() {
         return variables;
     }
@@ -794,6 +820,12 @@ public class LineReaderImpl implements LineReader, Flushable
     @Override
     public void setVariable(String name, Object value) {
         variables.put(name, value);
+    }
+
+    @Override
+    public LineReader option(Option option, boolean value) {
+        options.put(option, value);
+        return this;
     }
 
     @Override
@@ -846,10 +878,12 @@ public class LineReaderImpl implements LineReader, Flushable
             str = sb.toString();
         }
 
+        if (maskingCallback != null) {
+            historyLine = maskingCallback.history(historyLine);
+        }
+
         // we only add it to the history if the buffer is not empty
-        // and if mask is null, since having a mask typically means
-        // the string was a password. We clear the mask after this call
-        if (str.length() > 0 && mask == null) {
+        if (historyLine != null && historyLine.length() > 0 ) {
             history.add(Instant.now(), historyLine);
         }
         return str;
@@ -1891,13 +1925,18 @@ public class LineReaderImpl implements LineReader, Flushable
     protected boolean insertClose(String s) {
         putString(s);
 
+        long blink = getLong(BLINK_MATCHING_PAREN, DEFAULT_BLINK_MATCHING_PAREN);
+        if (blink <= 0) {
+            return true;
+        }
+
         int closePosition = buf.cursor();
 
         buf.move(-1);
         doViMatchBracket();
         redisplay();
 
-        peekCharacter(getLong(BLINK_MATCHING_PAREN, DEFAULT_BLINK_MATCHING_PAREN));
+        peekCharacter(blink);
 
         buf.cursor(closePosition);
         return true;
@@ -2222,6 +2261,20 @@ public class LineReaderImpl implements LineReader, Flushable
     */
 
     protected void cleanup() {
+        if (isSet(Option.ERASE_LINE_ON_FINISH)) {
+            Buffer oldBuffer = buf.copy();
+            AttributedString oldPrompt = prompt;
+            buf.clear();
+            prompt = new AttributedString("");
+            doCleanup();
+            prompt = oldPrompt;
+            buf.copyFrom(oldBuffer);
+        } else {
+            doCleanup();
+        }
+    }
+
+    protected void doCleanup() {
         buf.cursor(buf.length());
         post = null;
         if (size.getColumns() > 0 || size.getRows() > 0) {
@@ -2229,6 +2282,8 @@ public class LineReaderImpl implements LineReader, Flushable
             println();
             terminal.puts(Capability.keypad_local);
             terminal.trackMouse(Terminal.MouseTracking.Off);
+            if (isSet(Option.BRACKETED_PASTE))
+                terminal.writer().write(BRACKETED_PASTE_OFF);
             flush();
         }
         history.moveToEnd();
@@ -3285,6 +3340,9 @@ public class LineReaderImpl implements LineReader, Flushable
         widgets.put(YANK, this::yank);
         widgets.put(YANK_POP, this::yankPop);
         widgets.put(MOUSE, this::mouse);
+        widgets.put(BEGIN_PASTE, this::beginPaste);
+        widgets.put(FOCUS_IN, this::focusIn);
+        widgets.put(FOCUS_OUT, this::focusOut);
         return widgets;
     }
 
@@ -3308,7 +3366,12 @@ public class LineReaderImpl implements LineReader, Flushable
 
             sb.setLength(0);
             sb.append(prompt);
-            concat(getMaskedBuffer(buf.upToCursor()).columnSplitLength(Integer.MAX_VALUE), sb);
+            String line = buf.upToCursor();
+            if(maskingCallback != null) {
+                line = maskingCallback.display(line);
+            }
+            
+            concat(new AttributedString(line).columnSplitLength(Integer.MAX_VALUE), sb);
             AttributedString toCursor = sb.toAttributedString();
 
             int w = WCWidth.wcwidth('…');
@@ -3335,10 +3398,7 @@ public class LineReaderImpl implements LineReader, Flushable
                 full = sb.toAttributedString();
             }
 
-            display.update(Collections.singletonList(full), cursor - smallTerminalOffset);
-            if (flush) {
-                flush();
-            }
+            display.update(Collections.singletonList(full), cursor - smallTerminalOffset, flush);
             return;
         }
 
@@ -3372,16 +3432,8 @@ public class LineReaderImpl implements LineReader, Flushable
             AttributedStringBuilder sb = new AttributedStringBuilder().tabs(TAB_WIDTH);
             sb.append(prompt);
             String buffer = buf.upToCursor();
-            if (mask != null) {
-                if (mask == NULL_MASK) {
-                    buffer = "";
-                } else {
-                    StringBuilder nsb = new StringBuilder();
-                    for (int i = buffer.length(); i-- > 0; ) {
-                        nsb.append((char) mask);
-                    }
-                    buffer = nsb.toString();
-                }
+            if (maskingCallback != null) {
+                buffer = maskingCallback.display(buffer);
             }
             sb.append(insertSecondaryPrompts(new AttributedString(buffer), secondaryPrompts, false));
             List<AttributedString> promptLines = sb.columnSplitLength(size.getColumns(), false, display.delayLineWrap());
@@ -3391,11 +3443,7 @@ public class LineReaderImpl implements LineReader, Flushable
             }
         }
 
-        display.update(newLines, cursorPos);
-
-        if (flush) {
-            flush();
-        }
+        display.update(newLines, cursorPos, flush);
     }
 
     private void concat(List<AttributedString> lines, AttributedStringBuilder sb) {
@@ -3410,7 +3458,12 @@ public class LineReaderImpl implements LineReader, Flushable
         sb.append(lines.get(lines.size() - 1));
     }
 
-    private AttributedString getDisplayedBufferWithPrompts(List<AttributedString> secondaryPrompts) {
+    /**
+     * Compute the full string to be displayed with the left, right and secondary prompts
+     * @param secondaryPrompts a list to store the secondary prompts
+     * @return
+     */
+    public AttributedString getDisplayedBufferWithPrompts(List<AttributedString> secondaryPrompts) {
         AttributedString attBuf = getHighlightedBuffer(buf.toString());
 
         AttributedString tNewBuf = insertSecondaryPrompts(attBuf, secondaryPrompts);
@@ -3424,29 +3477,14 @@ public class LineReaderImpl implements LineReader, Flushable
         return full.toAttributedString();
     }
 
-    private AttributedString getMaskedBuffer(String buffer) {
-        if (mask != null) {
-            if (mask == NULL_MASK) {
-                buffer = "";
-            } else {
-                StringBuilder sb = new StringBuilder();
-                for (int i = buffer.length(); i-- > 0;) {
-                    sb.append((char) mask);
-                }
-                buffer = sb.toString();
-            }
+    private AttributedString getHighlightedBuffer(String buffer) {
+        if (maskingCallback != null) {
+            buffer = maskingCallback.display(buffer);
+        } 
+        if (highlighter != null && !isSet(Option.DISABLE_HIGHLIGHTER)) {
+            return highlighter.highlight(this, buffer);
         }
         return new AttributedString(buffer);
-    }
-
-    private AttributedString getHighlightedBuffer(String buffer) {
-        if (mask != null) {
-            return getMaskedBuffer(buffer);
-        } else if (highlighter != null && !isSet(Option.DISABLE_HIGHLIGHTER)) {
-            return highlighter.highlight(this, buffer);
-        } else {
-            return new AttributedString(buffer);
-        }
     }
 
     private AttributedString expandPromptPattern(String pattern, int padToWidth,
@@ -3743,6 +3781,10 @@ public class LineReaderImpl implements LineReader, Flushable
     }
 
     protected boolean doComplete(CompletionType lst, boolean useMenu, boolean prefix) {
+        // If completion is disabled, just bail out
+        if (getBoolean(DISABLE_COMPLETION, false)) {
+            return true;
+        }
         // Try to expand history first
         // If there is actually an expansion, bail out now
         try {
@@ -3797,8 +3839,7 @@ public class LineReaderImpl implements LineReader, Flushable
         int errors = getInt(ERRORS, DEFAULT_ERRORS);
 
         // Build a list of sorted candidates
-        NavigableMap<String, List<Candidate>> sortedCandidates =
-                new TreeMap<>(caseInsensitive ? String.CASE_INSENSITIVE_ORDER : null);
+        Map<String, List<Candidate>> sortedCandidates = new HashMap<>();
         for (Candidate cand : candidates) {
             sortedCandidates
                     .computeIfAbsent(AttributedString.fromAnsi(cand.value()).toString(), s -> new ArrayList<>())
@@ -3811,33 +3852,37 @@ public class LineReaderImpl implements LineReader, Flushable
                       Map<String, List<Candidate>>>> matchers;
         Predicate<String> exact;
         if (prefix) {
-            String wp = line.word().substring(0, line.wordCursor());
+            String wd = line.word();
+            String wdi = caseInsensitive ? wd.toLowerCase() : wd;
+            String wp = wdi.substring(0, line.wordCursor());
             matchers = Arrays.asList(
-                    simpleMatcher(s -> s.startsWith(wp)),
-                    simpleMatcher(s -> s.contains(wp)),
-                    typoMatcher(wp, errors)
+                    simpleMatcher(s -> (caseInsensitive ? s.toLowerCase() : s).startsWith(wp)),
+                    simpleMatcher(s -> (caseInsensitive ? s.toLowerCase() : s).contains(wp)),
+                    typoMatcher(wp, errors, caseInsensitive)
             );
-            exact = s -> s.equals(wp);
+            exact = s -> caseInsensitive ? s.equalsIgnoreCase(wp) : s.equals(wp);
         } else if (isSet(Option.COMPLETE_IN_WORD)) {
             String wd = line.word();
-            String wp = wd.substring(0, line.wordCursor());
-            String ws = wd.substring(line.wordCursor());
+            String wdi = caseInsensitive ? wd.toLowerCase() : wd;
+            String wp = wdi.substring(0, line.wordCursor());
+            String ws = wdi.substring(line.wordCursor());
             Pattern p1 = Pattern.compile(Pattern.quote(wp) + ".*" + Pattern.quote(ws) + ".*");
             Pattern p2 = Pattern.compile(".*" + Pattern.quote(wp) + ".*" + Pattern.quote(ws) + ".*");
             matchers = Arrays.asList(
-                    simpleMatcher(s -> p1.matcher(s).matches()),
-                    simpleMatcher(s -> p2.matcher(s).matches()),
-                    typoMatcher(wd, errors)
+                    simpleMatcher(s -> p1.matcher(caseInsensitive ? s.toLowerCase() : s).matches()),
+                    simpleMatcher(s -> p2.matcher(caseInsensitive ? s.toLowerCase() : s).matches()),
+                    typoMatcher(wdi, errors, caseInsensitive)
             );
-            exact = s -> s.equals(wd);
+            exact = s -> caseInsensitive ? s.equalsIgnoreCase(wd) : s.equals(wd);
         } else {
             String wd = line.word();
+            String wdi = caseInsensitive ? wd.toLowerCase() : wd;
             matchers = Arrays.asList(
-                    simpleMatcher(s -> s.startsWith(wd)),
-                    simpleMatcher(s -> s.contains(wd)),
-                    typoMatcher(wd, errors)
+                    simpleMatcher(s -> (caseInsensitive ? s.toLowerCase() : s).startsWith(wdi)),
+                    simpleMatcher(s -> (caseInsensitive ? s.toLowerCase() : s).contains(wdi)),
+                    typoMatcher(wdi, errors, caseInsensitive)
             );
-            exact = s -> s.equals(wd);
+            exact = s -> caseInsensitive ? s.equalsIgnoreCase(wd) : s.equals(wd);
         }
         // Find matching candidates
         Map<String, List<Candidate>> matching = Collections.emptyMap();
@@ -3958,6 +4003,29 @@ public class LineReaderImpl implements LineReader, Flushable
         return true;
     }
 
+    protected Comparator<Candidate> getCandidateComparator(boolean caseInsensitive, String word) {
+        String wdi = caseInsensitive ? word.toLowerCase() : word;
+        ToIntFunction<String> wordDistance = w -> distance(wdi, caseInsensitive ? w.toLowerCase() : w);
+        return Comparator
+                .comparing(Candidate::value, Comparator.comparingInt(wordDistance))
+                .thenComparing(Candidate::value, Comparator.comparingInt(String::length))
+                .thenComparing(Comparator.naturalOrder());
+    }
+
+    protected String getOthersGroupName() {
+        return getString(OTHERS_GROUP_NAME, DEFAULT_OTHERS_GROUP_NAME);
+    }
+
+    protected String getOriginalGroupName() {
+        return getString(ORIGINAL_GROUP_NAME, DEFAULT_ORIGINAL_GROUP_NAME);
+    }
+
+
+    protected Comparator<String> getGroupComparator() {
+        return Comparator.<String>comparingInt(s -> getOthersGroupName().equals(s) ? 1 : getOriginalGroupName().equals(s) ? -1 : 0)
+                .thenComparing(String::toLowerCase, Comparator.naturalOrder());
+    }
+
     private void mergeCandidates(List<Candidate> possible) {
         // Merge candidates if the have the same key
         Map<String, List<Candidate>> keyedCandidates = new HashMap<>();
@@ -3993,14 +4061,14 @@ public class LineReaderImpl implements LineReader, Flushable
     }
 
     private Function<Map<String, List<Candidate>>,
-                     Map<String, List<Candidate>>> typoMatcher(String word, int errors) {
+                     Map<String, List<Candidate>>> typoMatcher(String word, int errors, boolean caseInsensitive) {
         return m -> {
             Map<String, List<Candidate>> map = m.entrySet().stream()
-                    .filter(e -> distance(word, e.getKey()) < errors)
+                    .filter(e -> distance(word, caseInsensitive ? e.getKey() : e.getKey().toLowerCase()) < errors)
                     .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
             if (map.size() > 1) {
                 map.computeIfAbsent(word, w -> new ArrayList<>())
-                        .add(new Candidate(word, word, "original", null, null, null, false));
+                        .add(new Candidate(word, word, getOriginalGroupName(), null, null, null, false));
             }
             return map;
         };
@@ -4062,80 +4130,79 @@ public class LineReaderImpl implements LineReader, Flushable
             update();
         }
 
-        public void down() {
-            if (isSet(Option.LIST_ROWS_FIRST)) {
-                int r = selection / columns;
-                int c = selection % columns;
-                if ((r + 1) * columns + c < possible.size()) {
-                    r++;
-                } else if (c + 1 < columns) {
-                    c++;
-                    r = 0;
-                } else {
-                    r = 0;
-                    c = 0;
+        /**
+         * Move 'step' options along the major axis of the menu.<p>
+         * ie. if the menu is listing rows first, change row (up/down);
+         * otherwise move column (left/right)
+         *
+         * @param step number of options to move by
+         */
+        private void major(int step) {
+            int axis = isSet(Option.LIST_ROWS_FIRST) ? columns : lines;
+            int sel = selection + step * axis;
+            if (sel < 0) {
+                int pos = (sel + axis) % axis; // needs +axis as (-1)%x == -1
+                int remainders = possible.size() % axis;
+                sel = possible.size() - remainders + pos;
+                if (sel >= possible.size()) {
+                    sel -= axis;
                 }
-                selection = r * columns + c;
-                update();
-            } else {
-                next();
+            } else if (sel >= possible.size()) {
+                sel = sel % axis;
             }
+            selection = sel;
+            update();
         }
-        public void left() {
-            if (isSet(Option.LIST_ROWS_FIRST)) {
-                previous();
-            } else {
-                int c = selection / lines;
-                int r = selection % lines;
-                if (c - 1 >= 0) {
-                    c--;
-                } else {
-                    c = columns - 1;
-                    r--;
-                }
-                selection = c * lines + r;
-                if (selection < 0) {
-                    selection = possible.size() - 1;
-                }
-                update();
+
+        /**
+         * Move 'step' options along the minor axis of the menu.<p>
+         * ie. if the menu is listing rows first, move along the row (left/right);
+         * otherwise move along the column (up/down)
+         *
+         * @param step number of options to move by
+         */
+        private void minor(int step) {
+            int axis = isSet(Option.LIST_ROWS_FIRST) ? columns : lines;
+            int row = selection % axis;
+            int options = possible.size();
+            if (selection - row + axis > options) {
+                // selection is the last row/column
+                // so there are fewer options than other rows
+                axis = options%axis;
             }
+            selection = selection - row + ((axis + row + step) % axis);
+            update();
         }
-        public void right() {
-            if (isSet(Option.LIST_ROWS_FIRST)) {
-                next();
-            } else {
-                int c = selection / lines;
-                int r = selection % lines;
-                if (c + 1 < columns) {
-                    c++;
-                } else {
-                    c = 0;
-                    r++;
-                }
-                selection = c * lines + r;
-                if (selection >= possible.size()) {
-                    selection = 0;
-                }
-                update();
-            }
-        }
+
         public void up() {
             if (isSet(Option.LIST_ROWS_FIRST)) {
-                int r = selection / columns;
-                int c = selection % columns;
-                if (r > 0) {
-                    r--;
-                } else {
-                    c = (c + columns - 1) % columns;
-                    r = lines - 1;
-                    if (r * columns + c >= possible.size()) {
-                        r--;
-                    }
-                }
-                selection = r * columns + c;
-                update();
+                major(-1);
             } else {
-                previous();
+                minor(-1);
+            }
+        }
+
+        public void down() {
+            if (isSet(Option.LIST_ROWS_FIRST)) {
+                major(1);
+            } else {
+                minor(1);
+            }
+        }
+
+        public void left() {
+            if (isSet(Option.LIST_ROWS_FIRST)) {
+                minor(-1);
+            } else {
+                major(-1);
+            }
+        }
+
+        public void right() {
+            if (isSet(Option.LIST_ROWS_FIRST)) {
+                minor(1);
+            } else {
+                major(1);
             }
         }
 
@@ -4157,7 +4224,12 @@ public class LineReaderImpl implements LineReader, Flushable
                         topLine = pr.selectedLine - displayed + 1;
                     }
                 }
-                List<AttributedString> lines = pr.post.columnSplitLength(size.getColumns(), true, display.delayLineWrap());
+                AttributedString post = pr.post;
+                if (post.length() > 0 && post.charAt(post.length() - 1) != '\n') {
+                    post = new AttributedStringBuilder(post.length() + 1)
+                            .append(post).append("\n").toAttributedString();
+                }
+                List<AttributedString> lines = post.columnSplitLength(size.getColumns(), true, display.delayLineWrap());
                 List<AttributedString> sub = new ArrayList<>(lines.subList(topLine, topLine + displayed));
                 sub.add(new AttributedStringBuilder()
                         .style(AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN))
@@ -4208,9 +4280,11 @@ public class LineReaderImpl implements LineReader, Flushable
                     menuSupport.previous();
                     break;
                 case UP_LINE_OR_HISTORY:
+                case UP_LINE_OR_SEARCH:
                     menuSupport.up();
                     break;
                 case DOWN_LINE_OR_HISTORY:
+                case DOWN_LINE_OR_SEARCH:
                     menuSupport.down();
                     break;
                 case FORWARD_CHAR:
@@ -4228,7 +4302,6 @@ public class LineReaderImpl implements LineReader, Flushable
                         String chars = getString(REMOVE_SUFFIX_CHARS, DEFAULT_REMOVE_SUFFIX_CHARS);
                         if (SELF_INSERT.equals(ref)
                                 && chars.indexOf(getLastBinding().charAt(0)) >= 0
-                                || ACCEPT_LINE.equals(ref)
                                 || BACKWARD_DELETE_CHAR.equals(ref)) {
                             buf.backspace(completion.suffix().length());
                         }
@@ -4277,16 +4350,22 @@ public class LineReaderImpl implements LineReader, Flushable
             }
         }
 
+        boolean caseInsensitive = isSet(Option.CASE_INSENSITIVE);
         StringBuilder sb = new StringBuilder();
         while (true) {
             String current = completed + sb.toString();
             List<Candidate> cands;
             if (sb.length() > 0) {
                 cands = possible.stream()
-                        .filter(c -> c.value().startsWith(current))
+                        .filter(c -> caseInsensitive
+                                    ? c.value().toLowerCase().startsWith(current.toLowerCase())
+                                    : c.value().startsWith(current))
+                        .sorted(getCandidateComparator(caseInsensitive, current))
                         .collect(Collectors.toList());
             } else {
-                cands = possible;
+                cands = possible.stream()
+                        .sorted(getCandidateComparator(caseInsensitive, current))
+                        .collect(Collectors.toList());
             }
             post = () -> {
                 AttributedString t = insertSecondaryPrompts(AttributedStringBuilder.append(prompt, buf.toString()), new ArrayList<>());
@@ -4366,21 +4445,28 @@ public class LineReaderImpl implements LineReader, Flushable
     }
 
     protected PostResult computePost(List<Candidate> possible, Candidate selection, List<Candidate> ordered, String completed) {
+        return computePost(possible, selection, ordered, completed, display::wcwidth, size.getColumns(), isSet(Option.AUTO_GROUP), isSet(Option.GROUP), isSet(Option.LIST_ROWS_FIRST));
+    }
+
+    protected PostResult computePost(List<Candidate> possible, Candidate selection, List<Candidate> ordered, String completed, Function<String, Integer> wcwidth, int width, boolean autoGroup, boolean groupName, boolean rowsFirst) {
         List<Object> strings = new ArrayList<>();
-        boolean groupName = isSet(Option.GROUP);
         if (groupName) {
-            LinkedHashMap<String, TreeMap<String, Candidate>> sorted = new LinkedHashMap<>();
+            Comparator<String> groupComparator = getGroupComparator();
+            Map<String, Map<String, Candidate>> sorted;
+            sorted = groupComparator != null
+                        ? new TreeMap<>(groupComparator)
+                        : new LinkedHashMap<>();
             for (Candidate cand : possible) {
                 String group = cand.group();
-                sorted.computeIfAbsent(group != null ? group : "", s -> new TreeMap<>())
+                sorted.computeIfAbsent(group != null ? group : "", s -> new LinkedHashMap<>())
                         .put(cand.value(), cand);
             }
-            for (Map.Entry<String, TreeMap<String, Candidate>> entry : sorted.entrySet()) {
+            for (Map.Entry<String, Map<String, Candidate>> entry : sorted.entrySet()) {
                 String group = entry.getKey();
                 if (group.isEmpty() && sorted.size() > 1) {
-                    group = "others";
+                    group = getOthersGroupName();
                 }
-                if (!group.isEmpty() && isSet(Option.AUTO_GROUP)) {
+                if (!group.isEmpty() && autoGroup) {
                     strings.add(group);
                 }
                 strings.add(new ArrayList<>(entry.getValue().values()));
@@ -4398,17 +4484,15 @@ public class LineReaderImpl implements LineReader, Flushable
                 }
                 sorted.put(cand.value(), cand);
             }
-            if (isSet(Option.AUTO_GROUP)) {
-                for (String group : groups) {
-                    strings.add(group);
-                }
+            if (autoGroup) {
+                strings.addAll(groups);
             }
             strings.add(new ArrayList<>(sorted.values()));
             if (ordered != null) {
                 ordered.addAll(sorted.values());
             }
         }
-        return toColumns(strings, selection, completed);
+        return toColumns(strings, selection, completed, wcwidth, width, rowsFirst);
     }
 
     private static final String DESC_PREFIX = "(";
@@ -4417,24 +4501,23 @@ public class LineReaderImpl implements LineReader, Flushable
     private static final int MARGIN_BETWEEN_COLUMNS = 3;
 
     @SuppressWarnings("unchecked")
-    protected PostResult toColumns(List<Object> items, Candidate selection, String completed) {
+    protected PostResult toColumns(List<Object> items, Candidate selection, String completed, Function<String, Integer> wcwidth, int width, boolean rowsFirst) {
         int[] out = new int[2];
-        int width = size.getColumns();
         // TODO: support Option.LIST_PACKED
         // Compute column width
         int maxWidth = 0;
         for (Object item : items) {
             if (item instanceof String) {
-                int len = display.wcwidth((String) item);
+                int len = wcwidth.apply((String) item);
                 maxWidth = Math.max(maxWidth, len);
             }
             else if (item instanceof List) {
                 for (Candidate cand : (List<Candidate>) item) {
-                    int len = display.wcwidth(cand.displ());
+                    int len = wcwidth.apply(cand.displ());
                     if (cand.descr() != null) {
                         len += MARGIN_BETWEEN_DISPLAY_AND_DESC;
                         len += DESC_PREFIX.length();
-                        len += display.wcwidth(cand.descr());
+                        len += wcwidth.apply(cand.descr());
                         len += DESC_SUFFIX.length();
                     }
                     maxWidth = Math.max(maxWidth, len);
@@ -4444,7 +4527,7 @@ public class LineReaderImpl implements LineReader, Flushable
         // Build columns
         AttributedStringBuilder sb = new AttributedStringBuilder();
         for (Object list : items) {
-            toColumns(list, width, maxWidth, sb, selection, completed, out);
+            toColumns(list, width, maxWidth, sb, selection, completed, rowsFirst, out);
         }
         if (sb.length() > 0 && sb.charAt(sb.length() - 1) == '\n') {
             sb.setLength(sb.length() - 1);
@@ -4453,13 +4536,13 @@ public class LineReaderImpl implements LineReader, Flushable
     }
 
     @SuppressWarnings("unchecked")
-    protected void toColumns(Object items, int width, int maxWidth, AttributedStringBuilder sb, Candidate selection, String completed, int[] out) {
+    protected void toColumns(Object items, int width, int maxWidth, AttributedStringBuilder sb, Candidate selection, String completed, boolean rowsFirst, int[] out) {
         if (maxWidth <= 0) {
             return;
         }
         // This is a group
         if (items instanceof String) {
-            sb.style(AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN))
+            sb.style(getCompletionStyleGroup())
                     .append((String) items)
                     .style(AttributedStyle.DEFAULT)
                     .append("\n");
@@ -4473,10 +4556,12 @@ public class LineReaderImpl implements LineReader, Flushable
             while (c > 1 && c * maxWidth + (c - 1) * MARGIN_BETWEEN_COLUMNS >= width) {
                 c--;
             }
-            int columns = c;
-            int lines = (candidates.size() + columns - 1) / columns;
+            int lines = (candidates.size() + c - 1) / c;
+            // Try to minimize the number of columns for the given number of rows
+            // Prevents eg 9 candiates being split 6/3 instead of 5/4.
+            final int columns = (candidates.size() + lines - 1) / lines;
             IntBinaryOperator index;
-            if (isSet(Option.LIST_ROWS_FIRST)) {
+            if (rowsFirst) {
                 index = (i, j) -> i * columns + j;
             } else {
                 index = (i, j) -> j * lines + i;
@@ -4506,7 +4591,7 @@ public class LineReaderImpl implements LineReader, Flushable
                         }
                         if (cand == selection) {
                             out[1] = i;
-                            sb.style(AttributedStyle.INVERSE);
+                            sb.style(getCompletionStyleSelection());
                             if (left.toString().startsWith(completed)) {
                                 sb.append(left.toString(), 0, completed.length());
                                 sb.append(left.toString(), completed.length(), left.length());
@@ -4522,7 +4607,7 @@ public class LineReaderImpl implements LineReader, Flushable
                             sb.style(AttributedStyle.DEFAULT);
                         } else {
                             if (left.toString().startsWith(completed)) {
-                                sb.style(sb.style().foreground(AttributedStyle.CYAN));
+                                sb.style(getCompletionStyleStarting());
                                 sb.append(left, 0, completed.length());
                                 sb.style(AttributedStyle.DEFAULT);
                                 sb.append(left, completed.length(), left.length());
@@ -4535,7 +4620,7 @@ public class LineReaderImpl implements LineReader, Flushable
                                 }
                             }
                             if (right != null) {
-                                sb.style(AttributedStyle.DEFAULT.foreground(AttributedStyle.BLACK + AttributedStyle.BRIGHT));
+                                sb.style(getCompletionStyleDescription());
                                 sb.append(right);
                                 sb.style(AttributedStyle.DEFAULT);
                             }
@@ -4551,6 +4636,30 @@ public class LineReaderImpl implements LineReader, Flushable
             }
             out[0] += lines;
         }
+    }
+
+    private AttributedStyle getCompletionStyleStarting() {
+        return getCompletionStyle(COMPLETION_STYLE_STARTING, DEFAULT_COMPLETION_STYLE_STARTING);
+    }
+
+    protected AttributedStyle getCompletionStyleDescription() {
+        return getCompletionStyle(COMPLETION_STYLE_DESCRIPTION, DEFAULT_COMPLETION_STYLE_DESCRIPTION);
+    }
+
+    protected AttributedStyle getCompletionStyleGroup() {
+        return getCompletionStyle(COMPLETION_STYLE_GROUP, DEFAULT_COMPLETION_STYLE_GROUP);
+    }
+
+    protected AttributedStyle getCompletionStyleSelection() {
+        return getCompletionStyle(COMPLETION_STYLE_SELECTION, DEFAULT_COMPLETION_STYLE_SELECTION);
+    }
+
+    protected AttributedStyle getCompletionStyle(String name, String value) {
+        return buildStyle(getString(name, value));
+    }
+
+    protected AttributedStyle buildStyle(String str) {
+        return AttributedString.fromAnsi("\u001b[" + str + "m ").styleAt(0);
     }
 
     private String getCommonStart(String str1, String str2, boolean caseInsensitive) {
@@ -4868,6 +4977,40 @@ public class LineReaderImpl implements LineReader, Flushable
             buf.moveXY(event.getX() - cursor.getX() - adjust, event.getY() - cursor.getY());
         }
         return true;
+    }
+
+    public boolean beginPaste() {
+        final Object SELF_INSERT = new Object();
+        final Object END_PASTE = new Object();
+        KeyMap<Object> keyMap = new KeyMap<>();
+        keyMap.setUnicode(SELF_INSERT);
+        keyMap.setNomatch(SELF_INSERT);
+        keyMap.setAmbiguousTimeout(0);
+        keyMap.bind(END_PASTE, BRACKETED_PASTE_END);
+        StringBuilder sb = new StringBuilder();
+        while (true) {
+            Object b = bindingReader.readBinding(keyMap);
+            if (b == END_PASTE) {
+                break;
+            }
+            String s = getLastBinding();
+            if ("\r".equals(s)) {
+                s = "\n";
+            }
+            sb.append(s);
+        }
+        regionActive = RegionType.PASTE;
+        regionMark = getBuffer().cursor();
+        getBuffer().write(sb);
+        return true;
+    }
+
+    public boolean focusIn() {
+        return false;
+    }
+
+    public boolean focusOut() {
+        return false;
     }
 
     /**
@@ -5300,6 +5443,9 @@ public class LineReaderImpl implements LineReader, Flushable
         bind(map, KILL_WHOLE_LINE,      key(Capability.key_dl));
         bind(map, OVERWRITE_MODE,       key(Capability.key_ic));
         bind(map, MOUSE,                key(Capability.key_mouse));
+        bind(map, BEGIN_PASTE,          BRACKETED_PASTE_BEGIN);
+        bind(map, FOCUS_IN,             FOCUS_IN_SEQ);
+        bind(map, FOCUS_OUT,            FOCUS_OUT_SEQ);
     }
 
     /**

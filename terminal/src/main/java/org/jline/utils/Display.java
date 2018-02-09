@@ -92,10 +92,19 @@ public class Display {
     }
 
     /**
-     * Update the display according to the new lines
+     * Update the display according to the new lines and flushes the output.
      * @param targetCursorPos desired cursor position - see Size.cursorPos.
      */
     public void update(List<AttributedString> newLines, int targetCursorPos) {
+        update(newLines, targetCursorPos, true);
+    }
+
+    /**
+     * Update the display according to the new lines.
+     * @param targetCursorPos desired cursor position - see Size.cursorPos.
+     * @param flush whether the output should be flushed or not
+     */
+    public void update(List<AttributedString> newLines, int targetCursorPos, boolean flush) {
         if (reset) {
             terminal.puts(Capability.clear_screen);
             oldLines.clear();
@@ -111,7 +120,7 @@ public class Display {
         }
 
         // Detect scrolling
-        if (fullScreen && newLines.size() == oldLines.size() && canScroll) {
+        if ((fullScreen || newLines.size() >= rows) && newLines.size() == oldLines.size() && canScroll) {
             int nbHeaders = 0;
             int nbFooters = 0;
             // Find common headers and footers
@@ -301,9 +310,10 @@ public class Display {
                         terminal.puts(Capability.clr_eol);
                 }
             } else if (atRight) {
-                if (this.wrapAtEol)
-                   cursorPos++;
-                else {
+                if (this.wrapAtEol) {
+                    terminal.writer().write(" \b");
+                    cursorPos++;
+                } else {
                     terminal.puts(Capability.carriage_return); // CR / not newline.
                     cursorPos = curCol;
                 }
@@ -315,6 +325,10 @@ public class Display {
             moveVisualCursorTo(targetCursorPos < 0 ? currentPos : targetCursorPos, newLines);
         }
         oldLines = newLines;
+
+        if (flush) {
+            terminal.flush();
+        }
     }
 
     protected boolean deleteLines(int nb) {

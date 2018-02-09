@@ -36,7 +36,7 @@ public class SolarisNativePty extends JnaNativePty {
             len++;
         }
         String name = new String(buf, 0, len);
-        return new SolarisNativePty(-1, null, slave, FileDescriptor.in, name);
+        return new SolarisNativePty(-1, null, slave, FileDescriptor.in, 1, FileDescriptor.out, name);
     }
 
     public static SolarisNativePty open(Attributes attr, Size size) throws IOException {
@@ -58,6 +58,10 @@ public class SolarisNativePty extends JnaNativePty {
         super(master, masterFD, slave, slaveFD, name);
     }
 
+    public SolarisNativePty(int master, FileDescriptor masterFD, int slave, FileDescriptor slaveFD, int slaveOut, FileDescriptor slaveOutFD, String name) {
+        super(master, masterFD, slave, slaveFD, slaveOut, slaveOutFD, name);
+    }
+
     @Override
     public Attributes getAttr() throws IOException {
         termios termios = new termios();
@@ -66,7 +70,7 @@ public class SolarisNativePty extends JnaNativePty {
     }
 
     @Override
-    public void setAttr(Attributes attr) throws IOException {
+    protected void doSetAttr(Attributes attr) throws IOException {
         termios termios = new termios(attr);
         C_LIBRARY.tcsetattr(getSlave(), TCSANOW, termios);
     }

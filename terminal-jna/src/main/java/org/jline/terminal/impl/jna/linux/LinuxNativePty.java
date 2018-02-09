@@ -44,7 +44,7 @@ public class LinuxNativePty extends JnaNativePty {
             len++;
         }
         String name = new String(buf, 0, len);
-        return new LinuxNativePty(-1, null, slave, FileDescriptor.in, name);
+        return new LinuxNativePty(-1, null, slave, FileDescriptor.in, 1, FileDescriptor.out, name);
     }
 
     public static LinuxNativePty open(Attributes attr, Size size) throws IOException {
@@ -66,6 +66,10 @@ public class LinuxNativePty extends JnaNativePty {
         super(master, masterFD, slave, slaveFD, name);
     }
 
+    public LinuxNativePty(int master, FileDescriptor masterFD, int slave, FileDescriptor slaveFD, int slaveOut, FileDescriptor slaveOutFD, String name) {
+        super(master, masterFD, slave, slaveFD, slaveOut, slaveOutFD, name);
+    }
+
     @Override
     public Attributes getAttr() throws IOException {
         termios termios = new termios();
@@ -74,7 +78,7 @@ public class LinuxNativePty extends JnaNativePty {
     }
 
     @Override
-    public void setAttr(Attributes attr) throws IOException {
+    protected void doSetAttr(Attributes attr) throws IOException {
         termios termios = new termios(attr);
         termios org = new termios();
         C_LIBRARY.tcgetattr(getSlave(), org);

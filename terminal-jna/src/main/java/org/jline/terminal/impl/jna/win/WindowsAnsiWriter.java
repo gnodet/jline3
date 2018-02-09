@@ -9,10 +9,12 @@
 package org.jline.terminal.impl.jna.win;
 
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.Writer;
 
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
+import org.jline.utils.AnsiWriter;
+import org.jline.utils.Colors;
 
 import static org.jline.terminal.impl.jna.win.Kernel32.BACKGROUND_BLUE;
 import static org.jline.terminal.impl.jna.win.Kernel32.BACKGROUND_GREEN;
@@ -32,7 +34,7 @@ import static org.jline.terminal.impl.jna.win.Kernel32.FOREGROUND_RED;
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  * @author Joris Kuipers
  */
-public final class WindowsAnsiOutputStream extends AnsiOutputStream {
+public final class WindowsAnsiWriter extends AnsiWriter {
 
     private static final short FOREGROUND_BLACK   = 0;
     private static final short FOREGROUND_YELLOW  = (short) (FOREGROUND_RED|FOREGROUND_GREEN);
@@ -76,11 +78,13 @@ public final class WindowsAnsiOutputStream extends AnsiOutputStream {
     private final short originalColors;
 
     private boolean negative;
+    private boolean bold;
+    private boolean underline;
     private short savedX = -1;
     private short savedY = -1;
 
-    public WindowsAnsiOutputStream(OutputStream os, Pointer console) throws IOException {
-        super(os);
+    public WindowsAnsiWriter(Writer out, Pointer console) throws IOException {
+        super(out);
         this.console = console;
         getConsoleInfo();
         originalColors = info.wAttributes;
@@ -97,6 +101,14 @@ public final class WindowsAnsiOutputStream extends AnsiOutputStream {
     private void applyAttribute() throws IOException {
         out.flush();
         short attributes = info.wAttributes;
+        // bold is simulated by high foreground intensity
+        if (bold) {
+            attributes |= FOREGROUND_INTENSITY;
+        }
+        // underline is simulated by high foreground intensity
+        if (underline) {
+            attributes |= BACKGROUND_INTENSITY;
+        }
         if( negative ) {
             attributes = invertAttributeColors(attributes);
         }
@@ -106,25 +118,17 @@ public final class WindowsAnsiOutputStream extends AnsiOutputStream {
     private short invertAttributeColors(short attributes) {
         // Swap the the Foreground and Background bits.
         int fg = 0x000F & attributes;
-        fg <<= 8;
-        int bg = 0X00F0 * attributes;
-        bg >>=8;
+        fg <<= 4;
+        int bg = 0X00F0 & attributes;
+        bg >>= 4;
         attributes = (short) ((attributes & 0xFF00) | fg | bg);
         return attributes;
     }
 
     private void applyCursorPosition() throws IOException {
+        info.dwCursorPosition.X = (short) Math.max(0, Math.min(info.dwSize.X - 1, info.dwCursorPosition.X));
+        info.dwCursorPosition.Y = (short) Math.max(0, Math.min(info.dwSize.Y - 1, info.dwCursorPosition.Y));
         Kernel32.INSTANCE.SetConsoleCursorPosition(console, info.dwCursorPosition);
-    }
-
-    protected void processDefaultTextColor() throws IOException {
-        info.wAttributes = (short)((info.wAttributes & ~0x000F ) | (originalColors & 0x000F));
-        applyAttribute();
-    }
-
-    protected void processDefaultBackgroundColor() throws IOException {
-        info.wAttributes = (short)((info.wAttributes & ~0x00F0 ) | (originalColors & 0x00F0));
-        applyAttribute();
     }
 
     protected void processEraseScreen(int eraseOption) throws IOException {
@@ -179,91 +183,116 @@ public final class WindowsAnsiOutputStream extends AnsiOutputStream {
     protected void processCursorUpLine(int count) throws IOException {
         getConsoleInfo();
         info.dwCursorPosition.X = 0;
-        info.dwCursorPosition.Y = (short) Math.max(info.srWindow.Top, info.dwCursorPosition.Y-count);
+        info.dwCursorPosition.Y -= count;
         applyCursorPosition();
     }
 
     protected void processCursorDownLine(int count) throws IOException {
         getConsoleInfo();
         info.dwCursorPosition.X = 0;
-        info.dwCursorPosition.Y = (short) Math.min(info.dwSize.Y, info.dwCursorPosition.Y+count);
+        info.dwCursorPosition.Y += count;
         applyCursorPosition();
     }
 
     protected void processCursorLeft(int count) throws IOException {
         getConsoleInfo();
-        info.dwCursorPosition.X = (short) Math.max(0, info.dwCursorPosition.X-count);
+        info.dwCursorPosition.X -= count;
         applyCursorPosition();
     }
 
     protected void processCursorRight(int count) throws IOException {
         getConsoleInfo();
-        info.dwCursorPosition.X = (short)Math.min(info.srWindow.width(), info.dwCursorPosition.X+count);
+        info.dwCursorPosition.X += count;
         applyCursorPosition();
     }
 
     protected void processCursorDown(int count) throws IOException {
         getConsoleInfo();
-        info.dwCursorPosition.Y = (short) Math.min(info.dwSize.Y, info.dwCursorPosition.Y+count);
-        applyCursorPosition();
+        int nb = Math.max(0, info.dwCursorPosition.Y + count - info.dwSize.Y + 1);
+        if (nb != count) {
+            info.dwCursorPosition.Y += count;
+            applyCursorPosition();
+        }
+        if (nb > 0) {
+            Kernel32.SMALL_RECT scroll = new Kernel32.SMALL_RECT(info.srWindow);
+            scroll.Top = 0;
+            Kernel32.COORD org = new Kernel32.COORD();
+            org.X = 0;
+            org.Y = (short)(- nb);
+            Kernel32.CHAR_INFO info = new Kernel32.CHAR_INFO(' ', originalColors);
+            Kernel32.INSTANCE.ScrollConsoleScreenBuffer(console, scroll, scroll, org, info);
+        }
     }
 
     protected void processCursorUp(int count) throws IOException {
         getConsoleInfo();
-        info.dwCursorPosition.Y = (short) Math.max(info.srWindow.Top, info.dwCursorPosition.Y-count);
+        info.dwCursorPosition.Y -= count;
         applyCursorPosition();
     }
 
     protected void processCursorTo(int row, int col) throws IOException {
         getConsoleInfo();
-        info.dwCursorPosition.Y = (short) Math.max(info.srWindow.Top, Math.min(info.dwSize.Y, info.srWindow.Top+row-1));
-        info.dwCursorPosition.X = (short) Math.max(0, Math.min(info.srWindow.width(), col-1));
+        info.dwCursorPosition.Y = (short) (info.srWindow.Top + row - 1);
+        info.dwCursorPosition.X = (short) (col - 1);
         applyCursorPosition();
     }
 
     protected void processCursorToColumn(int x) throws IOException {
         getConsoleInfo();
-        info.dwCursorPosition.X = (short) Math.max(0, Math.min(info.srWindow.width(), x-1));
+        info.dwCursorPosition.X = (short) (x - 1);
         applyCursorPosition();
     }
 
-    protected void processSetForegroundColor(int color, boolean bright) throws IOException {
-        info.wAttributes = (short)((info.wAttributes & ~0x0007 ) | ANSI_FOREGROUND_COLOR_MAP[color]);
-        info.wAttributes = (short) ((info.wAttributes & ~FOREGROUND_INTENSITY) | (bright ? FOREGROUND_INTENSITY : 0));
+    @Override
+    protected void processSetForegroundColorExt(int paletteIndex) throws IOException {
+        int color = Colors.roundColor(paletteIndex, 16);
+        info.wAttributes = (short) ((info.wAttributes & ~0x0007) | ANSI_FOREGROUND_COLOR_MAP[color & 0x07]);
+        info.wAttributes = (short) ((info.wAttributes & ~FOREGROUND_INTENSITY) | (color > 8 ? FOREGROUND_INTENSITY : 0));
         applyAttribute();
     }
 
-    protected void processSetBackgroundColor(int color, boolean bright) throws IOException {
-        info.wAttributes = (short)((info.wAttributes & ~0x0070 ) | ANSI_BACKGROUND_COLOR_MAP[color]);
-        info.wAttributes = (short) ((info.wAttributes & ~BACKGROUND_INTENSITY) | (bright ? BACKGROUND_INTENSITY : 0));
+    protected void processSetBackgroundColorExt(int paletteIndex) throws IOException {
+        int color = Colors.roundColor(paletteIndex, 16);
+        info.wAttributes = (short)((info.wAttributes & ~0x0070 ) | ANSI_BACKGROUND_COLOR_MAP[color & 0x07]);
+        info.wAttributes = (short) ((info.wAttributes & ~BACKGROUND_INTENSITY) | (color > 8 ? BACKGROUND_INTENSITY : 0));
+        applyAttribute();
+    }
+
+    protected void processDefaultTextColor() throws IOException {
+        info.wAttributes = (short)((info.wAttributes & ~0x000F ) | (originalColors & 0x000F));
+        applyAttribute();
+    }
+
+    protected void processDefaultBackgroundColor() throws IOException {
+        info.wAttributes = (short)((info.wAttributes & ~0x00F0 ) | (originalColors & 0x00F0));
         applyAttribute();
     }
 
     protected void processAttributeRest() throws IOException {
         info.wAttributes = (short)((info.wAttributes & ~0x00FF ) | originalColors);
         this.negative = false;
+        this.bold = false;
+        this.underline = false;
         applyAttribute();
     }
 
     protected void processSetAttribute(int attribute) throws IOException {
         switch(attribute) {
             case ATTRIBUTE_INTENSITY_BOLD:
-                info.wAttributes = (short)(info.wAttributes | FOREGROUND_INTENSITY );
+                bold = true;
                 applyAttribute();
                 break;
             case ATTRIBUTE_INTENSITY_NORMAL:
-                info.wAttributes = (short)(info.wAttributes & ~FOREGROUND_INTENSITY );
+                bold = false;
                 applyAttribute();
                 break;
 
-            // Yeah, setting the background intensity is not underlining.. but it's best we can do
-            // using the Windows console API
             case ATTRIBUTE_UNDERLINE:
-                info.wAttributes = (short)(info.wAttributes | BACKGROUND_INTENSITY );
+                underline = true;
                 applyAttribute();
                 break;
             case ATTRIBUTE_UNDERLINE_OFF:
-                info.wAttributes = (short)(info.wAttributes & ~BACKGROUND_INTENSITY );
+                underline = false;
                 applyAttribute();
                 break;
 
@@ -292,6 +321,30 @@ public final class WindowsAnsiOutputStream extends AnsiOutputStream {
             info.dwCursorPosition.Y = savedY;
             applyCursorPosition();
         }
+    }
+
+    @Override
+    protected void processInsertLine(int optionInt) throws IOException {
+        getConsoleInfo();
+        Kernel32.SMALL_RECT scroll = new Kernel32.SMALL_RECT(info.srWindow);
+        scroll.Top = info.dwCursorPosition.Y;
+        Kernel32.COORD org = new Kernel32.COORD();
+        org.X = 0;
+        org.Y = (short)(info.dwCursorPosition.Y + optionInt);
+        Kernel32.CHAR_INFO info = new Kernel32.CHAR_INFO(' ', originalColors);
+        Kernel32.INSTANCE.ScrollConsoleScreenBuffer(console, scroll, scroll, org, info);
+    }
+
+    @Override
+    protected void processDeleteLine(int optionInt) throws IOException {
+        getConsoleInfo();
+        Kernel32.SMALL_RECT scroll = new Kernel32.SMALL_RECT(info.srWindow);
+        scroll.Top = info.dwCursorPosition.Y;
+        Kernel32.COORD org = new Kernel32.COORD();
+        org.X = 0;
+        org.Y = (short)(info.dwCursorPosition.Y - optionInt);
+        Kernel32.CHAR_INFO info = new Kernel32.CHAR_INFO(' ', originalColors);
+        Kernel32.INSTANCE.ScrollConsoleScreenBuffer(console, scroll, scroll, org, info);
     }
 
     protected void processChangeWindowTitle(String label) {

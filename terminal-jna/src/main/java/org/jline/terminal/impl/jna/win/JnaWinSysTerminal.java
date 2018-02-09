@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2016, the original author or authors.
+ * Copyright (c) 2002-2018, the original author or authors.
  *
  * This software is distributable under the BSD license. See the terms of the
  * BSD license in the documentation provided with this software.
@@ -8,9 +8,9 @@
  */
 package org.jline.terminal.impl.jna.win;
 
-import java.io.FileDescriptor;
-import java.io.FileOutputStream;
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.function.IntConsumer;
 
 import com.sun.jna.Pointer;
@@ -19,25 +19,28 @@ import org.jline.terminal.Cursor;
 import org.jline.terminal.Size;
 import org.jline.terminal.impl.AbstractWindowsTerminal;
 import org.jline.utils.InfoCmp;
-import org.jline.utils.Log;
 
 public class JnaWinSysTerminal extends AbstractWindowsTerminal {
 
     private static final Pointer consoleIn = Kernel32.INSTANCE.GetStdHandle(Kernel32.STD_INPUT_HANDLE);
     private static final Pointer consoleOut = Kernel32.INSTANCE.GetStdHandle(Kernel32.STD_OUTPUT_HANDLE);
 
-    private int prevButtonState;
-
     public JnaWinSysTerminal(String name, boolean nativeSignals) throws IOException {
-        this(name, nativeSignals, SignalHandler.SIG_DFL);
+        this(name, TYPE_WINDOWS, false, null, 0, nativeSignals, SignalHandler.SIG_DFL);
     }
 
-    public JnaWinSysTerminal(String name, boolean nativeSignals, SignalHandler signalHandler) throws IOException {
-        super(new WindowsAnsiOutputStream(new FileOutputStream(FileDescriptor.out), consoleOut),
-              name, nativeSignals, signalHandler);
+    public JnaWinSysTerminal(String name, String type, boolean ansiPassThrough, Charset encoding, int codepage, boolean nativeSignals, SignalHandler signalHandler) throws IOException {
+        super(ansiPassThrough
+                        ? new JnaWinConsoleWriter(consoleOut)
+                        : new WindowsAnsiWriter(new BufferedWriter(new JnaWinConsoleWriter(consoleOut)), consoleOut),
+              name, type, encoding, codepage, nativeSignals, signalHandler);
         strings.put(InfoCmp.Capability.key_mouse, "\\E[M");
+
+        // Start input pump thread
+        resume();
     }
 
+    @Override
     protected int getConsoleOutputCP() {
         return Kernel32.INSTANCE.GetConsoleOutputCP();
     }
@@ -60,110 +63,93 @@ public class JnaWinSysTerminal extends AbstractWindowsTerminal {
         return new Size(info.windowWidth(), info.windowHeight());
     }
 
-    private char[] mouse = new char[] { '\033', '[', 'M', ' ', ' ', ' ' };
-
-    protected byte[] readConsoleInput() throws IOException {
-        Kernel32.INPUT_RECORD[] events = doReadConsoleInput();
-        if (events == null) {
-            return new byte[0];
+    protected boolean processConsoleInput() throws IOException {
+        Kernel32.INPUT_RECORD event = readConsoleInput(100);
+        if (event == null) {
+            return false;
         }
-        StringBuilder sb = new StringBuilder();
-        for (Kernel32.INPUT_RECORD event : events) {
-            if (event.EventType == Kernel32.INPUT_RECORD.KEY_EVENT) {
-                Kernel32.KEY_EVENT_RECORD keyEvent = event.Event.KeyEvent;
-                // support some C1 control sequences: ALT + [@-_] (and [a-z]?) => ESC <ascii>
-                // http://en.wikipedia.org/wiki/C0_and_C1_control_codes#C1_set
-                final int altState = Kernel32.LEFT_ALT_PRESSED | Kernel32.RIGHT_ALT_PRESSED;
-                // Pressing "Alt Gr" is translated to Alt-Ctrl, hence it has to be checked that Ctrl is _not_ pressed,
-                // otherwise inserting of "Alt Gr" codes on non-US keyboards would yield errors
-                final int ctrlState = Kernel32.LEFT_CTRL_PRESSED | Kernel32.RIGHT_CTRL_PRESSED;
-                // Compute the overall alt state
-                boolean isAlt = ((keyEvent.dwControlKeyState & altState) != 0) && ((keyEvent.dwControlKeyState & ctrlState) == 0);
 
-                //Log.trace(keyEvent.keyDown? "KEY_DOWN" : "KEY_UP", "key code:", keyEvent.keyCode, "char:", (long)keyEvent.uchar);
-                if (keyEvent.bKeyDown) {
-                    if (keyEvent.uChar.UnicodeChar > 0) {
-                        boolean shiftPressed = (keyEvent.dwControlKeyState & Kernel32.SHIFT_PRESSED) != 0;
-                        if (keyEvent.uChar.UnicodeChar == '\t' && shiftPressed) {
-                            sb.append(getSequence(InfoCmp.Capability.key_btab));
-                        } else {
-                            if (isAlt) {
-                                sb.append('\033');
-                            }
-                            sb.append(keyEvent.uChar.UnicodeChar);
-                        }
-                    } else {
-                        String escapeSequence = getEscapeSequence(keyEvent.wVirtualKeyCode);
-                        if (escapeSequence != null) {
-                            for (int k = 0; k < keyEvent.wRepeatCount; k++) {
-                                if (isAlt) {
-                                    sb.append('\033');
-                                }
-                                sb.append(escapeSequence);
-                            }
-                        }
-                    }
-                } else {
-                    // key up event
-                    // support ALT+NumPad input method
-                    if (keyEvent.wVirtualKeyCode == 0x12/*VK_MENU ALT key*/ && keyEvent.uChar.UnicodeChar > 0) {
-                        sb.append(keyEvent.uChar.UnicodeChar);
-                    }
-                }
-            } else if (event.EventType == Kernel32.INPUT_RECORD.WINDOW_BUFFER_SIZE_EVENT) {
+        switch (event.EventType) {
+            case Kernel32.INPUT_RECORD.KEY_EVENT:
+                processKeyEvent(event.Event.KeyEvent);
+                return true;
+            case Kernel32.INPUT_RECORD.WINDOW_BUFFER_SIZE_EVENT:
                 raise(Signal.WINCH);
-            } else if (event.EventType == Kernel32.INPUT_RECORD.MOUSE_EVENT) {
-                Kernel32.MOUSE_EVENT_RECORD mouseEvent = event.Event.MouseEvent;
-                int dwEventFlags = mouseEvent.dwEventFlags;
-                int dwButtonState = mouseEvent.dwButtonState;
-                if (tracking == MouseTracking.Off
-                        || tracking == MouseTracking.Normal && dwEventFlags == Kernel32.MOUSE_MOVED
-                        || tracking == MouseTracking.Button && dwEventFlags == Kernel32.MOUSE_MOVED && dwButtonState == 0) {
-                    continue;
-                }
-                int cb = 0;
-                dwEventFlags &= ~ Kernel32.DOUBLE_CLICK; // Treat double-clicks as normal
-                if (dwEventFlags == Kernel32.MOUSE_WHEELED) {
-                    cb |= 64;
-                    if ((dwButtonState >> 16) < 0) {
-                        cb |= 1;
-                    }
-                } else if (dwEventFlags == Kernel32.MOUSE_HWHEELED) {
-                    continue;
-                } else if ((dwButtonState & Kernel32.FROM_LEFT_1ST_BUTTON_PRESSED) != 0) {
-                    cb |= 0x00;
-                } else if ((dwButtonState & Kernel32.RIGHTMOST_BUTTON_PRESSED) != 0) {
-                    cb |= 0x01;
-                } else if ((dwButtonState & Kernel32.FROM_LEFT_2ND_BUTTON_PRESSED) != 0) {
-                    cb |= 0x02;
-                } else {
-                    cb |= 0x03;
-                }
-                int cx = mouseEvent.dwMousePosition.X;
-                int cy = mouseEvent.dwMousePosition.Y;
-                mouse[3] = (char) (' ' + cb);
-                mouse[4] = (char) (' ' + cx + 1);
-                mouse[5] = (char) (' ' + cy + 1);
-                sb.append(mouse);
-                prevButtonState = dwButtonState;
-            }
+                return false;
+            case Kernel32.INPUT_RECORD.MOUSE_EVENT:
+                processMouseEvent(event.Event.MouseEvent);
+                return true;
+            case Kernel32.INPUT_RECORD.FOCUS_EVENT:
+                processFocusEvent(event.Event.FocusEvent.bSetFocus);
+                return true;
+            default:
+                // Skip event
+                return false;
         }
-        return sb.toString().getBytes();
     }
 
-    private Kernel32.INPUT_RECORD[] doReadConsoleInput() throws IOException {
-        Kernel32.INPUT_RECORD[] ir = new Kernel32.INPUT_RECORD[1];
-        IntByReference r = new IntByReference();
-        Kernel32.INSTANCE.ReadConsoleInput(consoleIn, ir, ir.length, r);
-        for (int i = 0; i < r.getValue(); ++i) {
-            switch (ir[i].EventType) {
-                case Kernel32.INPUT_RECORD.KEY_EVENT:
-                case Kernel32.INPUT_RECORD.WINDOW_BUFFER_SIZE_EVENT:
-                case Kernel32.INPUT_RECORD.MOUSE_EVENT:
-                    return ir;
-            }
+    private void processKeyEvent(Kernel32.KEY_EVENT_RECORD keyEvent) throws IOException {
+        processKeyEvent(keyEvent.bKeyDown, keyEvent.wVirtualKeyCode, keyEvent.uChar.UnicodeChar, keyEvent.dwControlKeyState);
+    }
+
+    private char[] focus = new char[] { '\033', '[', ' ' };
+
+    private void processFocusEvent(boolean hasFocus) throws IOException {
+        if (focusTracking) {
+            focus[2] = hasFocus ? 'I' : 'O';
+            slaveInputPipe.write(focus);
         }
-        return null;
+    }
+
+    private char[] mouse = new char[] { '\033', '[', 'M', ' ', ' ', ' ' };
+
+    private void processMouseEvent(Kernel32.MOUSE_EVENT_RECORD mouseEvent) throws IOException {
+        int dwEventFlags = mouseEvent.dwEventFlags;
+        int dwButtonState = mouseEvent.dwButtonState;
+        if (tracking == MouseTracking.Off
+                || tracking == MouseTracking.Normal && dwEventFlags == Kernel32.MOUSE_MOVED
+                || tracking == MouseTracking.Button && dwEventFlags == Kernel32.MOUSE_MOVED && dwButtonState == 0) {
+            return;
+        }
+        int cb = 0;
+        dwEventFlags &= ~ Kernel32.DOUBLE_CLICK; // Treat double-clicks as normal
+        if (dwEventFlags == Kernel32.MOUSE_WHEELED) {
+            cb |= 64;
+            if ((dwButtonState >> 16) < 0) {
+                cb |= 1;
+            }
+        } else if (dwEventFlags == Kernel32.MOUSE_HWHEELED) {
+            return;
+        } else if ((dwButtonState & Kernel32.FROM_LEFT_1ST_BUTTON_PRESSED) != 0) {
+            cb |= 0x00;
+        } else if ((dwButtonState & Kernel32.RIGHTMOST_BUTTON_PRESSED) != 0) {
+            cb |= 0x01;
+        } else if ((dwButtonState & Kernel32.FROM_LEFT_2ND_BUTTON_PRESSED) != 0) {
+            cb |= 0x02;
+        } else {
+            cb |= 0x03;
+        }
+        int cx = mouseEvent.dwMousePosition.X;
+        int cy = mouseEvent.dwMousePosition.Y;
+        mouse[3] = (char) (' ' + cb);
+        mouse[4] = (char) (' ' + cx + 1);
+        mouse[5] = (char) (' ' + cy + 1);
+        slaveInputPipe.write(mouse);
+    }
+
+    private final Kernel32.INPUT_RECORD[] inputEvents = new Kernel32.INPUT_RECORD[1];
+    private final IntByReference eventsRead = new IntByReference();
+
+    private Kernel32.INPUT_RECORD readConsoleInput(int dwMilliseconds) throws IOException {
+        if (Kernel32.INSTANCE.WaitForSingleObject(consoleIn, dwMilliseconds) != 0) {
+            return null;
+        }
+        Kernel32.INSTANCE.ReadConsoleInput(consoleIn, inputEvents, 1, eventsRead);
+        if (eventsRead.getValue() == 1) {
+            return inputEvents[0];
+        } else {
+            return null;
+        }
     }
 
     @Override

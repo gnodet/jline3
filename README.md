@@ -1,6 +1,6 @@
 <!--
 
-    Copyright (c) 2002-2016, the original author or authors.
+    Copyright (c) 2002-2017, the original author or authors.
 
     This software is distributable under the BSD license. See the terms of the
     BSD license in the documentation provided with this software.
@@ -14,7 +14,8 @@ JLine is a Java library for handling console input. It is similar in functionali
 
 JLine 3.x is an evolution of [JLine 2.x](https://github.com/jline/jline2).
 
-[![Build Status](https://travis-ci.org/jline/jline3.svg?branch=master)](https://travis-ci.org/jline/jline3)
+[![Build Status: Linux](https://travis-ci.org/jline/jline3.svg?branch=master)](https://travis-ci.org/jline/jline3)
+[![Build Status: Windows](https://ci.appveyor.com/api/projects/status/github/jline/jline3?svg=true)](https://ci.appveyor.com/project/gnodet/jline3)
 
 # License
 
@@ -24,6 +25,7 @@ JLine is distributed under the [BSD License](http://www.opensource.org/licenses/
 
 * [demos](https://github.com/jline/jline3/wiki/Demos)
 * [wiki](https://github.com/jline/jline3/wiki)
+* [javadoc](https://www.javadoc.io/doc/org.jline/jline/)
 
 # Forums
 
@@ -37,7 +39,7 @@ Use the following definition to use JLine in your maven project:
     <dependency>
       <groupId>org.jline</groupId>
       <artifactId>jline</artifactId>
-      <version>3.2.0</version>
+      <version>3.5.1</version>
     </dependency>
 
 JLine can also be used with more low-level jars:
@@ -45,12 +47,12 @@ JLine can also be used with more low-level jars:
     <dependency>
       <groupId>org.jline</groupId>
       <artifactId>jline-terminal</artifactId>
-      <version>3.2.0</version>
+      <version>3.5.1</version>
     </dependency>
     <dependency>
       <groupId>org.jline</groupId>
       <artifactId>jline-reader</artifactId>
-      <version>3.2.0</version>
+      <version>3.5.1</version>
     </dependency>
 
 # Building
@@ -65,4 +67,9 @@ Check out and build:
     git clone git://github.com/jline/jline3.git
     cd jline3
     mvn install
+    
+## Continuous Integration
+
+* [Travis](https://travis-ci.org/jline/jline3)
+* [AppVeyor](https://ci.appveyor.com/project/gnodet/jline3)
 

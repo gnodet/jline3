@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2016, the original author or authors.
+ * Copyright (c) 2002-2018, the original author or authors.
  *
  * This software is distributable under the BSD license. See the terms of the
  * BSD license in the documentation provided with this software.
@@ -13,6 +13,8 @@ import org.jline.terminal.Cursor;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.IntConsumer;
 
@@ -30,42 +32,71 @@ import java.util.function.IntConsumer;
 public class ExternalTerminal extends LineDisciplineTerminal {
 
     protected final AtomicBoolean closed = new AtomicBoolean();
-    protected final Thread pumpThread;
     protected final InputStream masterInput;
+    protected final AtomicBoolean paused = new AtomicBoolean(true);
+    protected Thread pumpThread;
 
     public ExternalTerminal(String name, String type,
                             InputStream masterInput,
                             OutputStream masterOutput,
-                            String encoding) throws IOException {
+                            Charset encoding) throws IOException {
         this(name, type, masterInput, masterOutput, encoding, SignalHandler.SIG_DFL);
     }
 
     public ExternalTerminal(String name, String type,
                             InputStream masterInput,
                             OutputStream masterOutput,
-                            String encoding,
+                            Charset encoding,
                             SignalHandler signalHandler) throws IOException {
         super(name, type, masterOutput, encoding, signalHandler);
         this.masterInput = masterInput;
-        this.pumpThread = new Thread(this::pump, toString() + " input pump thread");
-        this.pumpThread.start();
+        resume();
     }
 
     public void close() throws IOException {
         if (closed.compareAndSet(false, true)) {
-            pumpThread.interrupt();
+        	this.paused.set(true);
+        	this.pumpThread.interrupt();
             super.close();
         }
+    }
+
+    @Override
+    public boolean canPauseResume() {
+        return true;
+    }
+
+    @Override
+    public void pause() throws InterruptedException {
+        if (paused.compareAndSet(false, true)) {
+            this.pumpThread.interrupt();
+            this.pumpThread.join();
+        }
+    }
+
+    @Override
+    public void resume() {
+        if (paused.compareAndSet(true, false)) {
+            this.pumpThread = new Thread(this::pump, toString() + " input pump thread");
+            this.pumpThread.start();
+        }
+    }
+
+    @Override
+    public boolean paused() {
+        return paused.get();
     }
 
     public void pump() {
         try {
             while (true) {
                 int c = masterInput.read();
-                if (c < 0 || closed.get()) {
+                if (c >= 0) {
+                    processInputByte((char) c);
+                }
+                if (c < 0 || closed.get() || paused.get()) {
                     break;
                 }
-                processInputByte((char) c);
             }
         } catch (IOException e) {
             // Ignore

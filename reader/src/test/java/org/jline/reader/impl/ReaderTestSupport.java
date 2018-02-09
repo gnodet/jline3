@@ -10,6 +10,7 @@ package org.jline.reader.impl;
 
 import java.io.*;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.ConsoleHandler;
@@ -65,7 +66,7 @@ public abstract class ReaderTestSupport
 
         in = new EofPipedInputStream();
         out = new ByteArrayOutputStream();
-        terminal = new DumbTerminal("terminal", "ansi", in, out, "UTF-8");
+        terminal = new DumbTerminal("terminal", "ansi", in, out, StandardCharsets.UTF_8);
         terminal.setSize(new Size(160, 80));
         reader = new TestLineReader(terminal, "JLine", null);
         reader.setKeyMap(LineReaderImpl.EMACS);
@@ -126,7 +127,12 @@ public abstract class ReaderTestSupport
             final boolean clear) {
         // clear current buffer, if any
         if (clear) {
-            reader.getHistory().purge();
+            try {
+                reader.getHistory().purge();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
         in.setIn(new ByteArrayInputStream(buffer.getBytes()));
@@ -181,7 +187,7 @@ public abstract class ReaderTestSupport
         @Override
         public String toString() {
             try {
-                return out.toString("UTF-8");
+                return out.toString(StandardCharsets.UTF_8.name());
             } catch (UnsupportedEncodingException e) {
                 throw new RuntimeException(e);
             }
@@ -276,7 +282,7 @@ public abstract class ReaderTestSupport
         }
 
         public TestBuffer append(final String str) {
-            for (byte b : str.getBytes(Charset.forName("UTF-8"))) {
+            for (byte b : str.getBytes(StandardCharsets.UTF_8)) {
                 append(b);
             }
             return this;

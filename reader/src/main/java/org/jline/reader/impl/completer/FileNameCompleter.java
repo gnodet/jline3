@@ -43,7 +43,10 @@ import org.jline.utils.AttributedStyle;
  * @author <a href="mailto:mwp1@cornell.edu">Marc Prud'hommeaux</a>
  * @author <a href="mailto:jason@planet57.com">Jason Dillon</a>
  * @since 2.3
+ * @deprecated use org.jline.builtins.Completers$FileNameCompleter instead
+ * @see org.jline.builtins.Completers$FileNameCompleter
  */
+@Deprecated
 public class FileNameCompleter implements Completer
 {
 
@@ -113,16 +116,12 @@ public class FileNameCompleter implements Completer
         String name = p.getFileName().toString();
         if (Files.isDirectory(p)) {
             AttributedStringBuilder sb = new AttributedStringBuilder();
-            sb.style(AttributedStyle.BOLD.foreground(AttributedStyle.RED));
-            sb.append(name);
-            sb.style(AttributedStyle.DEFAULT);
+            sb.styled(AttributedStyle.BOLD.foreground(AttributedStyle.RED), name);
             sb.append("/");
             name = sb.toAnsi(terminal);
         } else if (Files.isSymbolicLink(p)) {
             AttributedStringBuilder sb = new AttributedStringBuilder();
-            sb.style(AttributedStyle.BOLD.foreground(AttributedStyle.RED));
-            sb.append(name);
-            sb.style(AttributedStyle.DEFAULT);
+            sb.styled(AttributedStyle.BOLD.foreground(AttributedStyle.RED), name);
             sb.append("@");
             name = sb.toAnsi(terminal);
         }

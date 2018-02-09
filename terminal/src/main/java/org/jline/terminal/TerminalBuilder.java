@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.ServiceLoader;
 
 import org.jline.terminal.impl.AbstractPosixTerminal;
@@ -29,6 +30,9 @@ import org.jline.terminal.spi.Pty;
 import org.jline.utils.Log;
 import org.jline.utils.OSUtils;
 
+import static org.jline.terminal.impl.AbstractWindowsTerminal.TYPE_WINDOWS;
+import static org.jline.terminal.impl.AbstractWindowsTerminal.TYPE_WINDOWS_256_COLOR;
+
 /**
  * Builder class to create terminals.
  */
@@ -39,6 +43,7 @@ public final class TerminalBuilder {
     //
 
     public static final String PROP_ENCODING = "org.jline.terminal.encoding";
+    public static final String PROP_CODEPAGE = "org.jline.terminal.codepage";
     public static final String PROP_TYPE = "org.jline.terminal.type";
     public static final String PROP_JNA = "org.jline.terminal.jna";
     public static final String PROP_JANSI = "org.jline.terminal.jansi";
@@ -68,7 +73,8 @@ public final class TerminalBuilder {
     private InputStream in;
     private OutputStream out;
     private String type;
-    private String encoding;
+    private Charset encoding;
+    private int codepage;
     private Boolean system;
     private Boolean jna;
     private Boolean jansi;
@@ -123,8 +129,52 @@ public final class TerminalBuilder {
         return this;
     }
 
-    public TerminalBuilder encoding(String encoding) {
+    /**
+     * Set the encoding to use for reading/writing from the console.
+     * If {@code null} (the default value), JLine will automatically select
+     * a {@link Charset}, usually the default system encoding. However,
+     * on some platforms (e.g. Windows) it may use a different one depending
+     * on the {@link Terminal} implementation.
+     *
+     * <p>Use {@link Terminal#encoding()} to get the {@link Charset} that
+     * should be used for a {@link Terminal}.</p>
+     *
+     * @param encoding The encoding to use or null to automatically select one
+     * @return The builder
+     * @throws UnsupportedCharsetException If the given encoding is not supported
+     * @see Terminal#encoding()
+     */
+    public TerminalBuilder encoding(String encoding) throws UnsupportedCharsetException {
+        return encoding(encoding != null ? Charset.forName(encoding) : null);
+    }
+
+    /**
+     * Set the {@link Charset} to use for reading/writing from the console.
+     * If {@code null} (the default value), JLine will automatically select
+     * a {@link Charset}, usually the default system encoding. However,
+     * on some platforms (e.g. Windows) it may use a different one depending
+     * on the {@link Terminal} implementation.
+     *
+     * <p>Use {@link Terminal#encoding()} to get the {@link Charset} that
+     * should be used to read/write from a {@link Terminal}.</p>
+     *
+     * @param encoding The encoding to use or null to automatically select one
+     * @return The builder
+     * @see Terminal#encoding()
+     */
+    public TerminalBuilder encoding(Charset encoding) {
         this.encoding = encoding;
+        return this;
+    }
+
+    /**
+     * @deprecated JLine now writes Unicode output independently from the selected
+     *   code page. Using this option will only make it emulate the selected code
+     *   page for {@link Terminal#input()} and {@link Terminal#output()}.
+     */
+    @Deprecated
+    public TerminalBuilder codepage(int codepage) {
+        this.codepage = codepage;
         return this;
     }
 
@@ -182,12 +232,19 @@ public final class TerminalBuilder {
         if (name == null) {
             name = "JLine terminal";
         }
-        String encoding = this.encoding;
+        Charset encoding = this.encoding;
         if (encoding == null) {
-            encoding = System.getProperty(PROP_ENCODING);
+            String charsetName = System.getProperty(PROP_ENCODING);
+            if (charsetName != null && Charset.isSupported(charsetName)) {
+                encoding = Charset.forName(charsetName);
+            }
         }
-        if (encoding == null) {
-            encoding = Charset.defaultCharset().name();
+        int codepage = this.codepage;
+        if (codepage <= 0) {
+            String str = System.getProperty(PROP_CODEPAGE);
+            if (str != null) {
+                codepage = Integer.parseInt(str);
+            }
         }
         String type = this.type;
         if (type == null) {
@@ -217,11 +274,16 @@ public final class TerminalBuilder {
                 Log.warn("Attributes and size fields are ignored when creating a system terminal");
             }
             IllegalStateException exception = new IllegalStateException("Unable to create a system terminal");
-            //
-            // Cygwin support
-            //
-            if (OSUtils.IS_CYGWIN || OSUtils.IS_MINGW) {
-                if (exec) {
+            if (OSUtils.IS_WINDOWS) {
+                boolean cygwinTerm = "cygwin".equals(System.getenv("TERM"));
+                boolean ansiPassThrough = OSUtils.IS_CONEMU;
+                if (type == null) {
+                    type = OSUtils.IS_CONEMU ? TYPE_WINDOWS_256_COLOR : TYPE_WINDOWS;
+                }
+                //
+                // Cygwin support
+                //
+                if ((OSUtils.IS_CYGWIN || OSUtils.IS_MINGW) && exec && !cygwinTerm) {
                     try {
                         Pty pty = ExecPty.current();
                         // Cygwin defaults to XTERM, but actually supports 256 colors,
@@ -236,11 +298,9 @@ public final class TerminalBuilder {
                         exception.addSuppressed(e);
                     }
                 }
-            }
-            else if (OSUtils.IS_WINDOWS) {
                 if (jna) {
                     try {
-                        return load(JnaSupport.class).winSysTerminal(name, nativeSignals, signalHandler);
+                        return load(JnaSupport.class).winSysTerminal(name, type, ansiPassThrough, encoding, codepage, nativeSignals, signalHandler);
                     } catch (Throwable t) {
                         Log.debug("Error creating JNA based terminal: ", t.getMessage(), t);
                         exception.addSuppressed(t);
@@ -248,42 +308,41 @@ public final class TerminalBuilder {
                 }
                 if (jansi) {
                     try {
-                        return load(JansiSupport.class).winSysTerminal(name, nativeSignals, signalHandler);
+                        return load(JansiSupport.class).winSysTerminal(name, type, ansiPassThrough, encoding, codepage, nativeSignals, signalHandler);
                     } catch (Throwable t) {
                         Log.debug("Error creating JANSI based terminal: ", t.getMessage(), t);
                         exception.addSuppressed(t);
                     }
                 }
             } else {
-                Pty pty = null;
                 if (jna) {
                     try {
-                        pty = load(JnaSupport.class).current();
+                        Pty pty = load(JnaSupport.class).current();
+                        return new PosixSysTerminal(name, type, pty, encoding, nativeSignals, signalHandler);
                     } catch (Throwable t) {
                         // ignore
                         Log.debug("Error creating JNA based terminal: ", t.getMessage(), t);
                         exception.addSuppressed(t);
                     }
                 }
-                if (jansi && pty == null) {
+                if (jansi) {
                     try {
-                        pty = load(JansiSupport.class).current();
+                        Pty pty = load(JansiSupport.class).current();
+                        return new PosixSysTerminal(name, type, pty, encoding, nativeSignals, signalHandler);
                     } catch (Throwable t) {
                         Log.debug("Error creating JANSI based terminal: ", t.getMessage(), t);
                         exception.addSuppressed(t);
                     }
                 }
-                if (exec && pty == null) {
+                if (exec) {
                     try {
-                        pty = ExecPty.current();
+                        Pty pty = ExecPty.current();
+                        return new PosixSysTerminal(name, type, pty, encoding, nativeSignals, signalHandler);
                     } catch (Throwable t) {
                         // Ignore if not a tty
                         Log.debug("Error creating EXEC based terminal: ", t.getMessage(), t);
                         exception.addSuppressed(t);
                     }
-                }
-                if (pty != null) {
-                    return new PosixSysTerminal(name, type, pty, encoding, nativeSignals, signalHandler);
                 }
             }
             if (dumb == null || dumb) {
@@ -294,7 +353,7 @@ public final class TerminalBuilder {
                         Log.warn("Unable to create a system terminal, creating a dumb terminal (enable debug logging for more information)");
                     }
                 }
-                return new DumbTerminal(name, type != null ? type : Terminal.TYPE_DUMB,
+                return new DumbTerminal(name, Terminal.TYPE_DUMB,
                         new FileInputStream(FileDescriptor.in),
                         new FileOutputStream(FileDescriptor.out),
                         encoding, signalHandler);

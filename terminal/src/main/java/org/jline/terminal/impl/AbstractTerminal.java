@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2016, the original author or authors.
+ * Copyright (c) 2002-2018, the original author or authors.
  *
  * This software is distributable under the BSD license. See the terms of the
  * BSD license in the documentation provided with this software.
@@ -10,6 +10,8 @@ package org.jline.terminal.impl;
 
 import java.io.IOError;
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.nio.charset.Charset;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,18 +37,20 @@ public abstract class AbstractTerminal implements Terminal {
 
     protected final String name;
     protected final String type;
+    protected final Charset encoding;
     protected final Map<Signal, SignalHandler> handlers = new HashMap<>();
     protected final Set<Capability> bools = new HashSet<>();
     protected final Map<Capability, Integer> ints = new HashMap<>();
     protected final Map<Capability, String> strings = new HashMap<>();
 
     public AbstractTerminal(String name, String type) throws IOException {
-        this(name, type, SignalHandler.SIG_DFL);
+        this(name, type, null, SignalHandler.SIG_DFL);
     }
 
-    public AbstractTerminal(String name, String type, SignalHandler signalHandler) throws IOException {
+    public AbstractTerminal(String name, String type, Charset encoding, SignalHandler signalHandler) throws IOException {
         this.name = name;
         this.type = type;
+        this.encoding = encoding != null ? encoding : Charset.defaultCharset();
         for (Signal signal : Signal.values()) {
             handlers.put(signal, signalHandler);
         }
@@ -92,8 +96,8 @@ public abstract class AbstractTerminal implements Terminal {
         Attributes newAttr = new Attributes(prvAttr);
         newAttr.setLocalFlags(EnumSet.of(LocalFlag.ICANON, LocalFlag.ECHO, LocalFlag.IEXTEN), false);
         newAttr.setInputFlags(EnumSet.of(InputFlag.IXON, InputFlag.ICRNL, InputFlag.INLCR), false);
-        newAttr.setControlChar(ControlChar.VMIN, 1);
-        newAttr.setControlChar(ControlChar.VTIME, 0);
+        newAttr.setControlChar(ControlChar.VMIN, 0);
+        newAttr.setControlChar(ControlChar.VTIME, 1);
         setAttributes(newAttr);
         return prvAttr;
     }
@@ -122,6 +126,11 @@ public abstract class AbstractTerminal implements Terminal {
 
     public String getKind() {
         return getClass().getSimpleName();
+    }
+
+    @Override
+    public Charset encoding() {
+        return this.encoding;
     }
 
     public void flush() {
@@ -196,4 +205,45 @@ public abstract class AbstractTerminal implements Terminal {
     public MouseEvent readMouseEvent(IntSupplier reader) {
         return lastMouseEvent = MouseSupport.readMouse(reader, lastMouseEvent);
     }
+
+    @Override
+    public boolean hasFocusSupport() {
+        return type != null && type.startsWith("xterm");
+    }
+
+    @Override
+    public boolean trackFocus(boolean tracking) {
+        if (hasFocusSupport()) {
+            writer().write(tracking ? "\033[?1004h" : "\033[?1004l");
+            writer().flush();
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    protected void checkInterrupted() throws InterruptedIOException {
+        if (Thread.interrupted()) {
+            throw new InterruptedIOException();
+        }
+    }
+
+    @Override
+    public boolean canPauseResume() {
+        return false;
+    }
+
+    @Override
+    public void pause() throws InterruptedException {
+    }
+
+    @Override
+    public void resume() {
+    }
+
+    @Override
+    public boolean paused() {
+        return false;
+    }
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2017, the original author or authors.
+ * Copyright (c) 2002-2018, the original author or authors.
  *
  * This software is distributable under the BSD license. See the terms of the
  * BSD license in the documentation provided with this software.
@@ -8,13 +8,12 @@
  */
 package org.jline.terminal.impl.jansi.win;
 
-import java.io.FileDescriptor;
-import java.io.FileOutputStream;
+import java.io.BufferedWriter;
 import java.io.IOError;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.function.IntConsumer;
 
-import org.fusesource.jansi.WindowsAnsiOutputStream;
 import org.fusesource.jansi.internal.Kernel32;
 import org.fusesource.jansi.internal.Kernel32.CONSOLE_SCREEN_BUFFER_INFO;
 import org.fusesource.jansi.internal.Kernel32.INPUT_RECORD;
@@ -24,7 +23,6 @@ import org.jline.terminal.Cursor;
 import org.jline.terminal.Size;
 import org.jline.terminal.impl.AbstractWindowsTerminal;
 import org.jline.utils.InfoCmp;
-import org.jline.utils.Log;
 
 import static org.fusesource.jansi.internal.Kernel32.GetConsoleScreenBufferInfo;
 import static org.fusesource.jansi.internal.Kernel32.GetStdHandle;
@@ -33,14 +31,25 @@ import static org.fusesource.jansi.internal.Kernel32.STD_OUTPUT_HANDLE;
 public class JansiWinSysTerminal extends AbstractWindowsTerminal {
 
     public JansiWinSysTerminal(String name, boolean nativeSignals) throws IOException {
-        this(name, nativeSignals, SignalHandler.SIG_DFL);
+        this(name, TYPE_WINDOWS, false, null, 0, nativeSignals, SignalHandler.SIG_DFL);
     }
 
-    public JansiWinSysTerminal(String name, boolean nativeSignals, SignalHandler signalHandler) throws IOException {
-        super(new WindowsAnsiOutputStream(new FileOutputStream(FileDescriptor.out)),
-              name, nativeSignals, signalHandler);
+    public JansiWinSysTerminal(String name, String type, boolean ansiPassThrough, Charset encoding, int codepage, boolean nativeSignals, SignalHandler signalHandler) throws IOException {
+        super(ansiPassThrough
+                        ? new JansiWinConsoleWriter()
+                        : new WindowsAnsiWriter(new BufferedWriter(new JansiWinConsoleWriter())),
+              name,
+              type,
+              encoding,
+              codepage,
+              nativeSignals,
+              signalHandler);
+
+        // Start input pump thread
+        resume();
     }
 
+    @Override
     protected int getConsoleOutputCP() {
         return Kernel32.GetConsoleOutputCP();
     }
@@ -62,58 +71,74 @@ public class JansiWinSysTerminal extends AbstractWindowsTerminal {
         return size;
     }
 
-    protected byte[] readConsoleInput() throws IOException {
-        INPUT_RECORD[] events = WindowsSupport.readConsoleInput(1);
+    protected boolean processConsoleInput() throws IOException {
+        INPUT_RECORD[] events = WindowsSupport.readConsoleInput(1, 100);
         if (events == null) {
-            return new byte[0];
+            return false;
         }
-        StringBuilder sb = new StringBuilder();
-        for (INPUT_RECORD event : events) {
-            KEY_EVENT_RECORD keyEvent = event.keyEvent;
-            // support some C1 control sequences: ALT + [@-_] (and [a-z]?) => ESC <ascii>
-            // http://en.wikipedia.org/wiki/C0_and_C1_control_codes#C1_set
-            final int altState = KEY_EVENT_RECORD.LEFT_ALT_PRESSED | KEY_EVENT_RECORD.RIGHT_ALT_PRESSED;
-            // Pressing "Alt Gr" is translated to Alt-Ctrl, hence it has to be checked that Ctrl is _not_ pressed,
-            // otherwise inserting of "Alt Gr" codes on non-US keyboards would yield errors
-            final int ctrlState = KEY_EVENT_RECORD.LEFT_CTRL_PRESSED | KEY_EVENT_RECORD.RIGHT_CTRL_PRESSED;
-            // Compute the overall alt state
-            boolean isAlt = ((keyEvent.controlKeyState & altState) != 0) && ((keyEvent.controlKeyState & ctrlState) == 0);
 
-            //Log.trace(keyEvent.keyDown? "KEY_DOWN" : "KEY_UP", "key code:", keyEvent.keyCode, "char:", (long)keyEvent.uchar);
-            if (keyEvent.keyDown) {
-                if (keyEvent.uchar > 0) {
-                    boolean shiftPressed = (keyEvent.controlKeyState & KEY_EVENT_RECORD.SHIFT_PRESSED) != 0;
-                    if (keyEvent.uchar == '\t' && shiftPressed) {
-                        sb.append(getSequence(InfoCmp.Capability.key_btab));
-                    } else {
-                        if (isAlt) {
-                            sb.append('\033');
-                        }
-                        sb.append(keyEvent.uchar);
-                    }
-                }
-                else {
-                    // virtual keycodes: http://msdn.microsoft.com/en-us/library/windows/desktop/dd375731(v=vs.85).aspx
-                    // TODO: numpad keys, modifiers
-                    String escapeSequence = getEscapeSequence(keyEvent.keyCode);
-                    if (escapeSequence != null) {
-                        for (int k = 0; k < keyEvent.repeatCount; k++) {
-                            if (isAlt) {
-                                sb.append('\033');
-                            }
-                            sb.append(escapeSequence);
-                        }
-                    }
-                }
-            } else {
-                // key up event
-                // support ALT+NumPad input method
-                if (keyEvent.keyCode == 0x12/*VK_MENU ALT key*/ && keyEvent.uchar > 0) {
-                    sb.append(keyEvent.uchar);
-                }
+        boolean flush = false;
+        for (INPUT_RECORD event : events) {
+            if (event.eventType == INPUT_RECORD.KEY_EVENT) {
+                KEY_EVENT_RECORD keyEvent = event.keyEvent;
+                processKeyEvent(keyEvent.keyDown , keyEvent.keyCode, keyEvent.uchar, keyEvent.controlKeyState);
+                flush = true;
+            } else if (event.eventType == INPUT_RECORD.WINDOW_BUFFER_SIZE_EVENT) {
+                raise(Signal.WINCH);
+            } else if (event.eventType == INPUT_RECORD.MOUSE_EVENT) {
+                processMouseEvent(event.mouseEvent);
+                flush = true;
+            } else if (event.eventType == INPUT_RECORD.FOCUS_EVENT) {
+                processFocusEvent(event.focusEvent.setFocus);
             }
         }
-        return sb.toString().getBytes();
+
+        return flush;
+    }
+
+    private char[] focus = new char[] { '\033', '[', ' ' };
+
+    private void processFocusEvent(boolean hasFocus) throws IOException {
+        if (focusTracking) {
+            focus[2] = hasFocus ? 'I' : 'O';
+            slaveInputPipe.write(focus);
+        }
+    }
+
+    private char[] mouse = new char[] { '\033', '[', 'M', ' ', ' ', ' ' };
+
+    private void processMouseEvent(Kernel32.MOUSE_EVENT_RECORD mouseEvent) throws IOException {
+        int dwEventFlags = mouseEvent.eventFlags;
+        int dwButtonState = mouseEvent.buttonState;
+        if (tracking == MouseTracking.Off
+                || tracking == MouseTracking.Normal && dwEventFlags == Kernel32.MOUSE_EVENT_RECORD.MOUSE_MOVED
+                || tracking == MouseTracking.Button && dwEventFlags == Kernel32.MOUSE_EVENT_RECORD.MOUSE_MOVED && dwButtonState == 0) {
+            return;
+        }
+        int cb = 0;
+        dwEventFlags &= ~ Kernel32.MOUSE_EVENT_RECORD.DOUBLE_CLICK; // Treat double-clicks as normal
+        if (dwEventFlags == Kernel32.MOUSE_EVENT_RECORD.MOUSE_WHEELED) {
+            cb |= 64;
+            if ((dwButtonState >> 16) < 0) {
+                cb |= 1;
+            }
+        } else if (dwEventFlags == Kernel32.MOUSE_EVENT_RECORD.MOUSE_HWHEELED) {
+            return;
+        } else if ((dwButtonState & Kernel32.MOUSE_EVENT_RECORD.FROM_LEFT_1ST_BUTTON_PRESSED) != 0) {
+            cb |= 0x00;
+        } else if ((dwButtonState & Kernel32.MOUSE_EVENT_RECORD.RIGHTMOST_BUTTON_PRESSED) != 0) {
+            cb |= 0x01;
+        } else if ((dwButtonState & Kernel32.MOUSE_EVENT_RECORD.FROM_LEFT_2ND_BUTTON_PRESSED) != 0) {
+            cb |= 0x02;
+        } else {
+            cb |= 0x03;
+        }
+        int cx = mouseEvent.mousePosition.x;
+        int cy = mouseEvent.mousePosition.y;
+        mouse[3] = (char) (' ' + cb);
+        mouse[4] = (char) (' ' + cx + 1);
+        mouse[5] = (char) (' ' + cy + 1);
+        slaveInputPipe.write(mouse);
     }
 
     @Override
@@ -126,4 +151,10 @@ public class JansiWinSysTerminal extends AbstractWindowsTerminal {
         return new Cursor(info.cursorPosition.x, info.cursorPosition.y);
     }
 
+    public void disableScrolling() {
+        strings.remove(InfoCmp.Capability.insert_line);
+        strings.remove(InfoCmp.Capability.parm_insert_line);
+        strings.remove(InfoCmp.Capability.delete_line);
+        strings.remove(InfoCmp.Capability.parm_delete_line);
+    }
 }

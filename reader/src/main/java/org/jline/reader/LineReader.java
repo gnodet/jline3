@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2017, the original author or authors.
+ * Copyright (c) 2002-2018, the original author or authors.
  *
  * This software is distributable under the BSD license. See the terms of the
  * BSD license in the documentation provided with this software.
@@ -247,6 +247,10 @@ public interface LineReader {
     String YANK = "yank";
     String YANK_POP = "yank-pop";
     String MOUSE = "mouse";
+    String FOCUS_IN = "terminal-focus-in";
+    String FOCUS_OUT = "terminal-focus-out";
+
+    String BEGIN_PASTE = "begin-paste";
 
     //
     // KeyMap names
@@ -279,6 +283,18 @@ public interface LineReader {
     String REMOVE_SUFFIX_CHARS = "REMOVE_SUFFIX_CHARS";
     String SEARCH_TERMINATORS = "search-terminators";
     String ERRORS = "errors";
+    /** Property for the "others" group name */
+    String OTHERS_GROUP_NAME = "OTHERS_GROUP_NAME";
+    /** Property for the "original" group name */
+    String ORIGINAL_GROUP_NAME = "ORIGINAL_GROUP_NAME";
+    /** Completion style for displaying groups name */
+    String COMPLETION_STYLE_GROUP = "COMPLETION_STYLE_GROUP";
+    /** Completion style for displaying the current selected item */
+    String COMPLETION_STYLE_SELECTION = "COMPLETION_STYLE_SELECTION";
+    /** Completion style for displaying the candidate description */
+    String COMPLETION_STYLE_DESCRIPTION = "COMPLETION_STYLE_DESCRIPTION";
+    /** Completion style for displaying the matching part of candidates */
+    String COMPLETION_STYLE_STARTING = "COMPLETION_STYLE_STARTING";
     /**
      * Set the template for prompts for secondary (continuation) lines.
      * This is a prompt template as described in the class header.
@@ -331,11 +347,13 @@ public interface LineReader {
         HISTORY_REDUCE_BLANKS(true),
         HISTORY_BEEP(true),
         HISTORY_INCREMENTAL(true),
+        /** when displaying candidates, group them by {@link Candidate#group()} */
         AUTO_GROUP(true),
         AUTO_MENU(true),
         AUTO_LIST(true),
         RECOGNIZE_EXACT,
-        GROUP,
+        /** display group name before each group (else display all group names first) */
+        GROUP(true),
         CASE_INSENSITIVE,
         LIST_AMBIGUOUS,
         LIST_PACKED,
@@ -360,9 +378,20 @@ public interface LineReader {
         DELAY_LINE_WRAP,
         AUTO_PARAM_SLASH(true),
         AUTO_REMOVE_SLASH(true),
-        INSERT_TAB(true),
+        /** When hitting the <tab> key at the beginning of the line, insert a tabulation
+         *  instead of completing.  This is mainly useful when {@link #BRACKETED_PASTE} is
+         *  disabled, so that copy/paste of indented text does not trigger completion.
+         */
+        INSERT_TAB,
         MOUSE,
-        DISABLE_HIGHLIGHTER;
+        DISABLE_HIGHLIGHTER,
+        BRACKETED_PASTE(true),
+        /**
+         * Instead of printing a new line when the line is read, the entire line
+         * (including the prompt) will be erased, thereby leaving the screen as it
+         * was before the readLine call.
+         */
+        ERASE_LINE_ON_FINISH;
 
         private final boolean def;
 
@@ -382,7 +411,8 @@ public interface LineReader {
     enum RegionType {
         NONE,
         CHAR,
-        LINE
+        LINE,
+        PASTE
     }
 
     /**
@@ -450,6 +480,34 @@ public interface LineReader {
      * @throws java.io.IOError in case of other i/o errors
      */
     String readLine(String prompt, String rightPrompt, Character mask, String buffer) throws UserInterruptException, EndOfFileException;
+
+    /**
+     * Read a line from the <i>in</i> {@link InputStream}, and return the line
+     * (without any trailing newlines).
+     *
+     * @param prompt      The prompt to issue to the terminal, may be null.
+     *   This is a template, with optional {@code '%'} escapes, as
+     *   described in the class header.
+     * @param rightPrompt The right prompt
+     *   This is a template, with optional {@code '%'} escapes, as
+     *   described in the class header.
+     * @param maskingCallback  The {@link MaskingCallback} to use when displaying lines and adding them to the line {@link History}
+     * @param buffer      The default value presented to the user to edit, may be null.
+     * @return            A line that is read from the terminal, can never be null.
+     *
+     * @throws UserInterruptException if readLine was interrupted (using Ctrl-C for example)
+     * @throws EndOfFileException if an EOF has been found (using Ctrl-D for example)
+     * @throws java.io.IOError in case of other i/o errors
+     */
+    String readLine(String prompt, String rightPrompt, MaskingCallback maskingCallback, String buffer) throws UserInterruptException, EndOfFileException;
+
+    //
+    // Chainable setters
+    //
+
+    LineReader variable(String name, Object value);
+
+    LineReader option(Option option, boolean value);
 
     void callWidget(String name);
 

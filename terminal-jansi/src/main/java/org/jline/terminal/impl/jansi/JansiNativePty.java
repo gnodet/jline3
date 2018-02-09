@@ -11,6 +11,7 @@ package org.jline.terminal.impl.jansi;
 import org.fusesource.jansi.internal.CLibrary;
 import org.jline.terminal.Attributes;
 import org.jline.terminal.Size;
+import org.jline.terminal.impl.AbstractPty;
 import org.jline.terminal.spi.Pty;
 import org.jline.utils.OSUtils;
 
@@ -27,20 +28,28 @@ import static org.jline.terminal.impl.jansi.JansiSupportImpl.JANSI_MAJOR_VERSION
 import static org.jline.terminal.impl.jansi.JansiSupportImpl.JANSI_MINOR_VERSION;
 import static org.jline.utils.ExecHelper.exec;
 
-public abstract class JansiNativePty implements Pty {
+public abstract class JansiNativePty extends AbstractPty implements Pty {
 
     private final int master;
     private final int slave;
+    private final int slaveOut;
     private final String name;
     private final FileDescriptor masterFD;
     private final FileDescriptor slaveFD;
+    private final FileDescriptor slaveOutFD;
 
     public JansiNativePty(int master, FileDescriptor masterFD, int slave, FileDescriptor slaveFD, String name) {
+        this(master, masterFD, slave, slaveFD, slave, slaveFD, name);
+    }
+
+    public JansiNativePty(int master, FileDescriptor masterFD, int slave, FileDescriptor slaveFD, int slaveOut, FileDescriptor slaveOutFD, String name) {
         this.master = master;
         this.slave = slave;
+        this.slaveOut = slaveOut;
         this.name = name;
         this.masterFD = masterFD;
         this.slaveFD = slaveFD;
+        this.slaveOutFD = slaveOutFD;
     }
 
     protected static String ttyname() throws IOException {
@@ -81,6 +90,10 @@ public abstract class JansiNativePty implements Pty {
         return slave;
     }
 
+    public int getSlaveOut() {
+        return slaveOut;
+    }
+
     public String getName() {
         return name;
     }
@@ -93,6 +106,10 @@ public abstract class JansiNativePty implements Pty {
         return slaveFD;
     }
 
+    public FileDescriptor getSlaveOutFD() {
+        return slaveOutFD;
+    }
+
     public InputStream getMasterInput() {
         return new FileInputStream(getMasterFD());
     }
@@ -101,12 +118,12 @@ public abstract class JansiNativePty implements Pty {
         return new FileOutputStream(getMasterFD());
     }
 
-    public InputStream getSlaveInput() {
+    protected InputStream doGetSlaveInput() {
         return new FileInputStream(getSlaveFD());
     }
 
     public OutputStream getSlaveOutput() {
-        return new FileOutputStream(getSlaveFD());
+        return new FileOutputStream(getSlaveOutFD());
     }
 
 
@@ -118,7 +135,7 @@ public abstract class JansiNativePty implements Pty {
     }
 
     @Override
-    public void setAttr(Attributes attr) throws IOException {
+    protected void doSetAttr(Attributes attr) throws IOException {
         CLibrary.Termios tios = toTermios(attr);
         CLibrary.tcsetattr(slave, TCSANOW, tios);
     }
