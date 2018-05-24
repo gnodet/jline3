@@ -15,8 +15,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
@@ -170,6 +177,49 @@ public class ExternalTerminalTest {
         }
         for (byte b : "abcdefghijklnopqrstuvwxyz".getBytes()) {
             assertEquals(b, term.input().read());
+        }
+    }
+
+    @Test
+    public void testExceptionOnRealInputStream() throws IOException, InterruptedException, ExecutionException {
+        try (ServerSocket ss = new ServerSocket(0)) {
+            Future<Socket> socket = Executors.newCachedThreadPool().submit(ss::accept);
+            try (Socket c = new Socket(ss.getInetAddress(), ss.getLocalPort())) {
+                Socket s = socket.get();
+                AtomicInteger count = new AtomicInteger();
+                Terminal term = new ExternalTerminal("JLine Terminal", null, s.getInputStream(), s.getOutputStream(), null) {
+                    @Override
+                    protected void processIOException(IOException ioException) {
+                        count.incrementAndGet();
+                        super.processIOException(ioException);
+                    }
+                };
+
+                Thread.sleep(50);
+                assertEquals(0, count.get());
+
+                c.getOutputStream().write("abcdef".getBytes());
+                c.getOutputStream().flush();
+
+                Thread.sleep(50);
+                assertEquals(0, count.get());
+
+                c.close();
+                Thread.sleep(100);
+                try {
+                    term.input().read();
+                    fail("Should have thrown an exception");
+                } catch (IOException error) {
+                    // expected
+                }
+                assertEquals(1, count.get());
+
+                Thread.sleep(100);
+                for (byte b : "abcdefghijklnopqrstuvwxyz".getBytes()) {
+                    assertEquals(b, term.input().read());
+                }
+                assertEquals(1, count.get());
+            }
         }
     }
 
