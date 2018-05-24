@@ -168,7 +168,9 @@ public class ExternalTerminalTest {
         } catch (IOException error) {
             // expected
         }
-        assertEquals('a', term.input().read());
+        for (byte b : "abcdefghijklnopqrstuvwxyz".getBytes()) {
+            assertEquals(b, term.input().read());
+        }
     }
 
     @Test

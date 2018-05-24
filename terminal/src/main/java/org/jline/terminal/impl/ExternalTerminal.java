@@ -116,16 +116,17 @@ public class ExternalTerminal extends LineDisciplineTerminal {
     }
 
     public void pump() {
-        boolean closeInput = false;
-        try {
-            while (true) {
+        while (true) {
+            try {
                 int c = masterInput.read();
                 if (c >= 0) {
                     processInputByte((char) c);
                 }
                 if (c < 0 || closed.get()) {
-                    closeInput = true;
-                    break;
+                    synchronized (lock) {
+                        pumpThread = null;
+                    }
+                    return;
                 }
                 synchronized (lock) {
                     if (paused) {
@@ -133,20 +134,8 @@ public class ExternalTerminal extends LineDisciplineTerminal {
                         return;
                     }
                 }
-            }
-        } catch (IOException e) {
-            processIOException(e);
-        } finally {
-            synchronized (lock) {
-                pumpThread = null;
-            }
-        }
-
-        if (closeInput) {
-            try {
-                slaveInput.close();
             } catch (IOException e) {
-                // ignore
+                processIOException(e);
             }
         }
     }
