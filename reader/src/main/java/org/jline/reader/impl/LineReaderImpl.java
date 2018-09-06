@@ -2710,6 +2710,18 @@ public class LineReaderImpl implements LineReader, Flushable
         return acceptLine();
     }
 
+    protected boolean acceptAndHold() {
+
+    }
+
+    protected boolean acceptLineAndDownHistory() {
+
+    }
+
+    protected boolean acceptAndInferNextHistory() {
+
+    }
+
     protected boolean acceptLine() {
         parsedLine = null;
         if (!isSet(Option.DISABLE_EVENT_EXPANSION)) {
@@ -3343,7 +3355,10 @@ public class LineReaderImpl implements LineReader, Flushable
 
     protected Map<String, Widget> builtinWidgets() {
         Map<String, Widget> widgets = new HashMap<>();
+        widgets.put(ACCEPT_AND_INFER_NEXT_HISTORY, this::acceptAndInferNextHistory);
+        widgets.put(ACCEPT_AND_HOLD, this::acceptAndHold);
         widgets.put(ACCEPT_LINE, this::acceptLine);
+        widgets.put(ACCEPT_LINE_AND_DOWN_HISTORY, this::acceptLineAndDownHistory);
         widgets.put(ARGUMENT_BASE, this::argumentBase);
         widgets.put(BACKWARD_CHAR, this::backwardChar);
         widgets.put(BACKWARD_DELETE_CHAR, this::backwardDeleteChar);
@@ -5372,6 +5387,7 @@ public class LineReaderImpl implements LineReader, Flushable
         bind(emacs, CLEAR_SCREEN,                           ctrl('L'));
         bind(emacs, ACCEPT_LINE,                            ctrl('M'));
         bind(emacs, DOWN_LINE_OR_HISTORY,                   ctrl('N'));
+        bind(emacs, ACCEPT_LINE_AND_DOWN_HISTORY,           ctrl('O'));
         bind(emacs, UP_LINE_OR_HISTORY,                     ctrl('P'));
         bind(emacs, HISTORY_INCREMENTAL_SEARCH_BACKWARD,    ctrl('R'));
         bind(emacs, HISTORY_INCREMENTAL_SEARCH_FORWARD,     ctrl('S'));
@@ -5415,6 +5431,7 @@ public class LineReaderImpl implements LineReader, Flushable
         bind(emacs, END_OF_HISTORY,                         alt('>'));
         bind(emacs, LIST_CHOICES,                           alt('?'));
         bind(emacs, DO_LOWERCASE_VERSION,                   range("^[A-^[Z"));
+        bind(emacs, ACCEPT_AND_HOLD,                        alt('a'));
         bind(emacs, BACKWARD_WORD,                          alt('b'));
         bind(emacs, CAPITALIZE_WORD,                        alt('c'));
         bind(emacs, KILL_WORD,                              alt('d'));
