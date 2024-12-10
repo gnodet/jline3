@@ -202,7 +202,7 @@ public class TailTipWidgets extends Widgets {
      */
     public boolean tailtipComplete() {
         if (doTailTip(LineReader.EXPAND_OR_COMPLETE)) {
-            if (lastBinding().equals("\t")) {
+            if ("\t".equals(lastBinding())) {
                 callWidget(LineReader.BACKWARD_CHAR);
                 reader.runMacro(key(reader.getTerminal(), InfoCmp.Capability.key_right));
             }
@@ -258,13 +258,8 @@ public class TailTipWidgets extends Widgets {
     private boolean doTailTip(String widget) {
         Buffer buffer = buffer();
         callWidget(widget);
-        Pair<String, Boolean> cmdkey;
         List<String> args = args();
-        if (buffer.length() == buffer.cursor()) {
-            cmdkey = cmdDescs.evaluateCommandLine(buffer.toString(), args);
-        } else {
-            cmdkey = cmdDescs.evaluateCommandLine(buffer.toString(), buffer.cursor());
-        }
+        Pair<String, Boolean> cmdkey = cmdDescs.evaluateCommandLine(buffer.toString(), args(), buffer.cursor());
         CmdDesc cmdDesc = cmdDescs.getDescription(cmdkey.getU());
         if (cmdDesc == null) {
             setErrorPattern(null);
