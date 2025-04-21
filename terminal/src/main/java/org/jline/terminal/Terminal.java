@@ -351,6 +351,13 @@ public interface Terminal extends Closeable, Flushable {
     boolean trackMouse(MouseTracking tracking);
 
     /**
+     * Returns the current mouse tracking mode.
+     *
+     * @see #trackMouse(MouseTracking)
+     */
+    MouseTracking getCurrentMouseTracking();
+
+    /**
      * Read a MouseEvent from the terminal input stream.
      * Such an event must have been detected by scanning the terminal's {@link Capability#key_mouse}
      * in the stream immediately before reading the event.

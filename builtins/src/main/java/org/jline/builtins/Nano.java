@@ -29,6 +29,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -47,6 +48,7 @@ import org.jline.terminal.Terminal.Signal;
 import org.jline.terminal.Terminal.SignalHandler;
 import org.jline.utils.*;
 import org.jline.utils.InfoCmp.Capability;
+import org.jline.utils.Status;
 import org.mozilla.universalchardet.UniversalDetector;
 
 import static org.jline.builtins.SyntaxHighlighter.*;
@@ -76,6 +78,7 @@ public class Nano implements Editor {
     public boolean wrapping = false;
     public boolean smoothScrolling = true;
     public boolean mouseSupport = false;
+    public Terminal.MouseTracking mouseTracking = Terminal.MouseTracking.Off;
     public boolean oneMoreLine = true;
     public boolean constantCursor = false;
     public boolean quickBlank = false;
@@ -123,6 +126,13 @@ public class Nano implements Editor {
     protected boolean readNewBuffer = true;
     private boolean nanorcIgnoreErrors;
     private final boolean windowsTerminal;
+    private boolean insertHelp = false;
+    private boolean help = false;
+    private Box suggestionBox;
+    private List<AttributedString> suggestions;
+    private List<List<AttributedString>> documentation;
+    private int mouseX;
+    private int mouseY;
 
     protected enum WriteMode {
         WRITE,
@@ -140,6 +150,18 @@ public class Nano implements Editor {
         RIGHT,
         LEFT,
         STILL
+    }
+
+    public interface Diagnostic {
+        int getStartLine();
+
+        int getStartColumn();
+
+        int getEndLine();
+
+        int getEndColumn();
+
+        String getMessage();
     }
 
     public static String[] usage() {
@@ -197,7 +219,7 @@ public class Nano implements Editor {
 
         protected Buffer(String file) {
             this.file = file;
-            this.syntaxHighlighter = SyntaxHighlighter.build(syntaxFiles, file, syntaxName, nanorcIgnoreErrors);
+            this.syntaxHighlighter = SyntaxHighlighter.build(file != null ? root.resolve(file) : null, syntaxName);
         }
 
         void open() throws IOException {
@@ -857,7 +879,7 @@ public class Nano implements Editor {
             }
         }
 
-        List<AttributedString> getDisplayedLines(int nbLines) {
+        List<AttributedString> getDisplayedLines(int nbLines, List<Diagnostic> diagnostics) {
             AttributedStyle s = AttributedStyle.DEFAULT.foreground(AttributedStyle.BLACK + AttributedStyle.BRIGHT);
             AttributedString cut = new AttributedString("…", s);
             AttributedString ret = new AttributedString("↩", s);
@@ -932,6 +954,52 @@ public class Nano implements Editor {
                 }
                 line.append('\n');
                 newLines.add(line.toAttributedString());
+            }
+            // add tool tips if any
+            if (diagnostics != null) {
+                for (Diagnostic diagnostic : diagnostics) {
+                    // TODO when they aren't on the same line
+                    if (diagnostic.getStartLine() == diagnostic.getEndColumn()) {
+                        int line = diagnostic.getEndColumn() - firstLineToDisplay;
+                        AttributedString attributedString = newLines.get(line);
+                        AttributedStringBuilder builder = new AttributedStringBuilder(attributedString.length());
+                        builder.append(attributedString.subSequence(0, diagnostic.getStartColumn()));
+                        builder.append(
+                                attributedString.subSequence(diagnostic.getStartColumn(), diagnostic.getEndColumn()),
+                                AttributedStyle.DEFAULT.underline().foreground(AttributedStyle.RED));
+                        builder.append(
+                                attributedString.subSequence(diagnostic.getEndColumn(), attributedString.length()));
+                        newLines.set(line, builder.toAttributedString());
+                        if (line == mouseY - 1
+                                && mouseX >= diagnostic.getStartColumn()
+                                && mouseX <= diagnostic.getEndColumn()) {
+                            String message = diagnostic.getMessage();
+                            if (message == null || message.isEmpty()) {
+                                continue;
+                            }
+                            // build tool tip box
+                            int xi = diagnostic.getStartColumn();
+                            int dBoxSize = message.length() + 2;
+                            int maxWidth = (int) Math.round(
+                                    (size.getColumns() - xi) * 0.60); // let's do 60% of what's left of the screen
+                            int xl = Math.min(dBoxSize + xi, xi + maxWidth);
+                            // adjust content
+                            List<AttributedString> boxLines = adjustLines(
+                                    Collections.singletonList(new AttributedString(message)),
+                                    dBoxSize - 2,
+                                    xl - xi - 2);
+                            // TODO: display above current pos if there is no space at the bottom
+                            Box box = new Box(
+                                    xi,
+                                    diagnostic.getStartColumn() + 1,
+                                    xl,
+                                    diagnostic.getStartLine() + boxLines.size() + 2);
+                            box.setLines(boxLines);
+                            addBoxBorders(newLines, box);
+                            addBoxLines(box, newLines);
+                        }
+                    }
+                }
             }
             return newLines;
         }
@@ -1771,7 +1839,8 @@ public class Nano implements Editor {
         terminal.puts(Capability.enter_ca_mode);
         terminal.puts(Capability.keypad_xmit);
         if (mouseSupport) {
-            terminal.trackMouse(Terminal.MouseTracking.Normal);
+            mouseTracking = terminal.getCurrentMouseTracking();
+            terminal.trackMouse(Terminal.MouseTracking.Any);
         }
 
         this.shortcuts = standardShortcuts();
@@ -1802,6 +1871,10 @@ public class Nano implements Editor {
                 Operation op;
                 switch (op = readOperation(keys)) {
                     case QUIT:
+                        if (help) {
+                            resetSuggestion();
+                            break;
+                        }
                         if (quit()) {
                             return;
                         }
@@ -1813,19 +1886,37 @@ public class Nano implements Editor {
                         read();
                         break;
                     case UP:
-                        buffer.moveUp(1);
+                        if (help && suggestionBox != null) {
+                            suggestionBox.up();
+                        } else {
+                            buffer.moveUp(1);
+                        }
                         break;
                     case DOWN:
-                        buffer.moveDown(1);
+                        if (help && suggestionBox != null) {
+                            suggestionBox.down();
+                        } else {
+                            buffer.moveDown(1);
+                        }
                         break;
                     case LEFT:
                         buffer.moveLeft(1);
+                        if (help) {
+                            resetSuggestion();
+                        }
                         break;
                     case RIGHT:
                         buffer.moveRight(1);
+                        if (help) {
+                            resetSuggestion();
+                        }
                         break;
                     case INSERT:
-                        buffer.insert(bindingReader.getLastBinding());
+                        if (this.help) {
+                            this.insertHelp = true;
+                        } else {
+                            buffer.insert(bindingReader.getLastBinding());
+                        }
                         break;
                     case BACKSPACE:
                         buffer.backspace(1);
@@ -1860,11 +1951,8 @@ public class Nano implements Editor {
                     case CUR_POS:
                         curPos();
                         break;
-                    case PREV_WORD:
-                        buffer.prevWord();
-                        break;
-                    case NEXT_WORD:
-                        buffer.nextWord();
+                    case LSP_SUGGESTION:
+                        help = true;
                         break;
                     case BEGINNING_OF_LINE:
                         buffer.beginningOfLine();
@@ -1964,7 +2052,7 @@ public class Nano implements Editor {
             }
         } finally {
             if (mouseSupport) {
-                terminal.trackMouse(Terminal.MouseTracking.Off);
+                terminal.trackMouse(mouseTracking);
             }
             if (!terminal.puts(Capability.exit_ca_mode)) {
                 terminal.puts(Capability.clear_screen);
@@ -1978,6 +2066,14 @@ public class Nano implements Editor {
             }
             patternHistory.persist();
         }
+    }
+
+    private void resetSuggestion() {
+        this.suggestions = null;
+        this.documentation = null;
+        this.suggestionBox = null;
+        this.insertHelp = false;
+        this.help = false;
     }
 
     private int editInputBuffer(Operation operation, int curPos) {
@@ -3021,6 +3117,9 @@ public class Nano implements Editor {
             } else if (event.getButton() == MouseEvent.Button.WheelUp) {
                 buffer.moveUp(1);
             }
+        } else if (event.getType() == MouseEvent.Type.Moved) {
+            this.mouseX = event.getX();
+            this.mouseY = event.getY();
         }
     }
 
@@ -3078,7 +3177,15 @@ public class Nano implements Editor {
         List<AttributedString> footer = computeFooter();
 
         int nbLines = size.getRows() - header.size() - footer.size();
-        List<AttributedString> newLines = buffer.getDisplayedLines(nbLines);
+        if (insertHelp) {
+            insertHelp();
+            resetSuggestion();
+        }
+        List<Diagnostic> diagnostics = computeDiagnostic();
+        List<AttributedString> newLines = buffer.getDisplayedLines(nbLines, diagnostics);
+        if (help) {
+            showCompletion(newLines);
+        }
         newLines.addAll(0, header);
         newLines.addAll(footer);
 
@@ -3095,6 +3202,180 @@ public class Nano implements Editor {
         if (windowsTerminal) {
             resetDisplay();
         }
+    }
+
+    protected void insertHelp() {}
+
+    private void showCompletion(List<AttributedString> newLines) {
+        if (this.documentation == null || this.suggestions == null) {
+            initDocLines();
+        }
+        if (suggestions.isEmpty()) {
+            resetSuggestion();
+            return;
+        }
+        initBoxes(newLines);
+    }
+
+    protected void initDocLines() {}
+
+    protected List<Diagnostic> computeDiagnostic() {
+        return Collections.emptyList();
+    }
+
+    private void initBoxes(List<AttributedString> screenLines) {
+        // TODO: when there is no space on the right, build boxes to the left of current pos
+        // TODO: when there is no space on the bottom, build boxes to the top of current pos
+        if (suggestionBox == null) {
+            suggestionBox = buildSuggestionBox(suggestions, screenLines);
+        }
+        addBoxBorders(screenLines, suggestionBox);
+        addBoxLines(suggestionBox, screenLines);
+        if (!documentation.isEmpty()) {
+            Box documentationBox = buildDocumentationBox(screenLines, suggestionBox);
+            addBoxBorders(screenLines, documentationBox);
+            addBoxLines(documentationBox, screenLines);
+        }
+    }
+
+    private Box buildSuggestionBox(List<AttributedString> suggestions, List<AttributedString> screenLines) {
+        // calculate width
+        int dXi = buffer.column - 3;
+        int xi = Math.max(printLineNumbers ? 9 : 1, dXi);
+        int maxSuggestionLength =
+                suggestions.stream().mapToInt(AttributedString::length).max().getAsInt() + 2;
+        int screenWidth =
+                (int) Math.round((size.getColumns() - xi) * 0.60); // let's do 60% of what's left of the screen
+        int xl = Math.min(maxSuggestionLength + xi, xi + screenWidth);
+
+        // calculate height
+        int maxHeight = screenLines.size() - 1;
+        int yi = buffer.line + 1;
+
+        // build suggestion box
+        int yl = Math.min(maxHeight, yi + suggestions.size() + 1);
+        Box box = new Box(xi, yi, xl, yl);
+        box.setLines(suggestions);
+        box.setSelectedStyle(AttributedStyle.DEFAULT.background(AttributedStyle.BLUE));
+        return box;
+    }
+
+    private Box buildDocumentationBox(List<AttributedString> screenLines, Box suggestionBox) {
+        List<AttributedString> documentation = this.documentation.get(suggestionBox.getSelected());
+        // calculate width
+        int dXi = suggestionBox.xl;
+        int dBoxSize =
+                documentation.stream().mapToInt(AttributedString::length).max().getAsInt() + 2;
+        int xi = Math.max(printLineNumbers ? 9 : 1, dXi);
+        int maxWidth = (int) Math.round((size.getColumns() - xi) * 0.60); // let's do 60% of what's left of the screen
+        int xl = Math.min(dBoxSize + xi, xi + maxWidth);
+        // adjust content
+        documentation = adjustLines(documentation, dBoxSize - 2, xl - xi - 2);
+        // calculate height
+        int height = screenLines.size();
+        int yi = suggestionBox.yi + suggestionBox.getSelectedInView();
+        int yl = yi + documentation.size() + 1;
+        if (yl > height - 1) {
+            yl = Math.min(height - 1, yi + 2);
+            yi = Math.max(1, yl - documentation.size() - 1);
+        }
+        // create documentation box
+        Box documentationBox = new Box(xi, yi, xl, yl);
+        documentationBox.setLines(documentation);
+        documentationBox.setSelectedStyle(AttributedStyle.DEFAULT);
+        return documentationBox;
+    }
+
+    private void addBoxLines(Box box, List<AttributedString> screenLines) {
+        for (int i = 0; i < box.visibleLines.size(); i++) {
+            AttributedStringBuilder line = new AttributedStringBuilder(box.xl - box.xi - 2);
+            AttributedStyle background = AttributedStyle.DEFAULT;
+            if (i == box.getSelectedInView()) {
+                background = box.getSelectedStyle();
+            }
+            line.append(box.visibleLines.get(i), background);
+            line.style(background);
+            line.append(' ', box.xl - box.xi - line.length() - 2);
+            setLineInBox(screenLines, box, box.yi + 1 + i, line.toAttributedString(), false);
+        }
+    }
+
+    private List<AttributedString> adjustLines(List<AttributedString> lines, int max, int boxLength) {
+        if (max <= boxLength) {
+            return lines;
+        }
+        List<AttributedString> adjustedLines = new ArrayList<>();
+        for (AttributedString line : lines) {
+            if (line.length() < boxLength) {
+                adjustedLines.add(line);
+            } else {
+                int start = 0;
+                while (start < line.length()) {
+                    int stepSize = Math.min(start + boxLength, line.length());
+                    int end = stepSize;
+                    // check last line
+                    if (end - start >= boxLength) {
+                        // let's not cutoff in the middle of a word.
+                        while (end > start && !Character.isWhitespace(line.charAt(end - 1))) {
+                            end--;
+                        }
+                    }
+                    if (end == start) {
+                        // there was no space, let's not loop forever
+                        end = stepSize;
+                    }
+                    adjustedLines.add(line.substring(start, end));
+                    start = end;
+                }
+            }
+        }
+        return adjustedLines;
+    }
+
+    private void addBoxBorders(List<AttributedString> newLines, Box box) {
+        int width = box.xl - box.xi;
+        AttributedStringBuilder top = new AttributedStringBuilder(width);
+        top.append('┌');
+        top.append('─', width - 2);
+        top.append('┐');
+        setLineInBox(newLines, box, box.yi, top.toAttributedString(), true);
+        AttributedStringBuilder sides = new AttributedStringBuilder(width);
+        sides.append('│');
+        sides.append(' ', width - 2);
+        sides.append('│');
+        AttributedString side = sides.toAttributedString();
+        for (int y = box.yi + 1; y < box.yl; y++) {
+            setLineInBox(newLines, box, y, side, true);
+        }
+        AttributedStringBuilder bottom = new AttributedStringBuilder(width);
+        bottom.append('└');
+        bottom.append('─', width - 2);
+        bottom.append('┘');
+        setLineInBox(newLines, box, box.yl, bottom.toAttributedString(), true);
+    }
+
+    private void setLineInBox(List<AttributedString> newLines, Box box, int y, AttributedString line, boolean borders) {
+        int start = box.xi;
+        int end = box.xl;
+        if (!borders) {
+            start++;
+            end--;
+        }
+        AttributedString currLine = newLines.get(y);
+        AttributedStringBuilder newLine = new AttributedStringBuilder(Math.max(end, currLine.length()) + 1);
+        int currLength = currLine.length();
+        // add carriage return at the end of the line
+        if (currLine.charAt(currLength - 1) == '\n') {
+            currLength -= 1;
+        }
+        newLine.append(currLine, 0, Math.min(start, currLength));
+        newLine.append(' ', start - currLength);
+        newLine.append(line);
+        newLine.append(currLine, start + line.length(), currLength);
+        if (currLength == currLine.length() - 1) {
+            newLine.append('\n');
+        }
+        newLines.set(y, newLine.toAttributedString());
     }
 
     protected List<AttributedString> computeFooter() {
@@ -3133,7 +3414,7 @@ public class Nano implements Editor {
         for (int l = 0; l < 2; l++) {
             AttributedStringBuilder sb = new AttributedStringBuilder();
             for (int c = 0; c < cols; c++) {
-                Map.Entry<String, String> entry = sit.hasNext() ? sit.next() : null;
+                Entry<String, String> entry = sit.hasNext() ? sit.next() : null;
                 String key = entry != null ? entry.getKey() : "";
                 String val = entry != null ? entry.getValue() : "";
                 sb.style(AttributedStyle.INVERSE);
@@ -3222,6 +3503,7 @@ public class Nano implements Editor {
         keys.bind(Operation.LEFT, ctrl('B'));
         keys.bind(Operation.NEXT_WORD, ctrl(' '));
         keys.bind(Operation.PREV_WORD, alt(' '));
+        keys.bind(Operation.LSP_SUGGESTION, ctrl(' '));
         keys.bind(Operation.UP, ctrl('P'));
         keys.bind(Operation.DOWN, ctrl('N'));
 
@@ -3302,6 +3584,7 @@ public class Nano implements Editor {
         SCROLL_DOWN,
         NEXT_WORD,
         PREV_WORD,
+        LSP_SUGGESTION,
         BEGINNING_OF_LINE,
         END_OF_LINE,
         FIRST_LINE,
@@ -3357,5 +3640,94 @@ public class Nano implements Editor {
         MOUSE_EVENT,
 
         TOGGLE_SUSPENSION
+    }
+
+    // y axis  (xi,yi)┌──────────────────────────────┐(xl,yi)
+    //               │                              │
+    //               │                              │
+    //               │                              │
+    //               │                              │
+    //               │                              │
+    //               │                              │
+    //               │                              │
+    //        (xi,yl)└──────────────────────────────┘(xl,yl)
+    //                           x axis
+    private static class Box {
+        // (xi,yi) upper left
+        // (xl,yi) upper right
+        // (xi,yl) lower left
+        // (xl,yl) lower right
+        private final int xi, xl, yi, yl;
+        private List<AttributedString> lines;
+        private int selected = 0;
+        private int selectedInView = 0;
+        private final int size;
+        private AttributedStyle selectedStyle = AttributedStyle.DEFAULT;
+        private List<AttributedString> visibleLines;
+
+        private Box(int xi, int yi, int xl, int yl) {
+            this.xi = xi;
+            this.yi = yi;
+            this.xl = xl;
+            this.yl = yl;
+            this.size = yl - yi - 1;
+        }
+
+        private void setLines(List<AttributedString> lines) {
+            this.lines = lines;
+            this.visibleLines = lines.subList(0, size);
+        }
+
+        private int getSelected() {
+            return selected;
+        }
+
+        private void setSelectedStyle(AttributedStyle selectedStyle) {
+            this.selectedStyle = selectedStyle;
+        }
+
+        private AttributedStyle getSelectedStyle() {
+            return selectedStyle;
+        }
+
+        private void down() {
+            selected = Math.floorMod(selected + 1, lines.size());
+            if (!scrollable() || selectedInView < size - 1) {
+                selectedInView++;
+                return;
+            }
+            // calculate new view
+            if (selected == 0) {
+                // return to the beginning of list
+                selectedInView = 0;
+                visibleLines = lines.subList(0, size);
+            } else {
+                visibleLines = lines.subList(selected - size + 1, selected + 1);
+            }
+        }
+
+        private void up() {
+            selected = Math.floorMod(selected - 1, lines.size());
+            if (!scrollable() || selectedInView > 0) {
+                selectedInView--;
+                return;
+            }
+            // calculate new view
+            if (selected == lines.size() - 1) {
+                // last element in list, return to beginning
+                this.selectedInView = this.size - 1;
+                this.visibleLines = this.lines.subList(this.lines.size() - size, this.lines.size());
+            } else {
+                this.visibleLines = this.lines.subList(selected, selected + size);
+            }
+        }
+
+        private boolean scrollable() {
+            return this.size < this.lines.size();
+        }
+
+        private int getSelectedInView() {
+            return Math.floorMod(selectedInView, lines.size());
+        }
     }
 }
