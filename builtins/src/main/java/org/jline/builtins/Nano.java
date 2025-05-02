@@ -57,6 +57,7 @@ import static org.jline.keymap.KeyMap.alt;
 import static org.jline.keymap.KeyMap.ctrl;
 import static org.jline.keymap.KeyMap.del;
 import static org.jline.keymap.KeyMap.key;
+import static org.jline.keymap.KeyMap.translate;
 
 public class Nano implements Editor {
 
@@ -129,8 +130,8 @@ public class Nano implements Editor {
     private boolean insertHelp = false;
     private boolean help = false;
     private Box suggestionBox;
-    private List<AttributedString> suggestions;
-    private List<List<AttributedString>> documentation;
+    protected List<AttributedString> suggestions;
+    protected List<List<AttributedString>> documentation;
     private int mouseX;
     private int mouseY;
 
@@ -220,6 +221,54 @@ public class Nano implements Editor {
         protected Buffer(String file) {
             this.file = file;
             this.syntaxHighlighter = SyntaxHighlighter.build(file != null ? root.resolve(file) : null, syntaxName);
+        }
+
+        public String getFile() {
+            return file;
+        }
+
+        public List<String> getLines() {
+            return lines;
+        }
+
+        public int getFirstLineToDisplay() {
+            return firstLineToDisplay;
+        }
+
+        public int getFirstColumnToDisplay() {
+            return firstColumnToDisplay;
+        }
+
+        public int getOffsetInLineToDisplay() {
+            return offsetInLineToDisplay;
+        }
+
+        public int getLine() {
+            return line;
+        }
+
+        public Charset getCharset() {
+            return charset;
+        }
+
+        public WriteFormat getFormat() {
+            return format;
+        }
+
+        public boolean isDirty() {
+            return dirty;
+        }
+
+        public SyntaxHighlighter getSyntaxHighlighter() {
+            return syntaxHighlighter;
+        }
+
+        public int getOffsetInLine() {
+            return offsetInLine;
+        }
+
+        public int getColumn() {
+            return column;
         }
 
         void open() throws IOException {
@@ -3210,7 +3259,7 @@ public class Nano implements Editor {
         if (this.documentation == null || this.suggestions == null) {
             initDocLines();
         }
-        if (suggestions.isEmpty()) {
+        if (suggestions == null || suggestions.isEmpty()) {
             resetSuggestion();
             return;
         }
@@ -3501,8 +3550,12 @@ public class Nano implements Editor {
 
         keys.bind(Operation.RIGHT, ctrl('F'));
         keys.bind(Operation.LEFT, ctrl('B'));
-        keys.bind(Operation.NEXT_WORD, ctrl(' '));
-        keys.bind(Operation.PREV_WORD, alt(' '));
+        keys.bind(Operation.NEXT_WORD, translate("^[[1;5C")); // ctrl-left
+        keys.bind(Operation.PREV_WORD, translate("^[[1;5D")); // ctrl-right
+        keys.bind(Operation.NEXT_WORD, alt(key(terminal, Capability.key_right)));
+        keys.bind(Operation.PREV_WORD, alt(key(terminal, Capability.key_left)));
+        keys.bind(Operation.NEXT_WORD, alt(translate("^[[C")));
+        keys.bind(Operation.PREV_WORD, alt(translate("^[[D")));
         keys.bind(Operation.LSP_SUGGESTION, ctrl(' '));
         keys.bind(Operation.UP, ctrl('P'));
         keys.bind(Operation.DOWN, ctrl('N'));
@@ -3642,7 +3695,7 @@ public class Nano implements Editor {
         TOGGLE_SUSPENSION
     }
 
-    // y axis  (xi,yi)┌──────────────────────────────┐(xl,yi)
+    // y axis (xi,yi)┌──────────────────────────────┐(xl,yi)
     //               │                              │
     //               │                              │
     //               │                              │
