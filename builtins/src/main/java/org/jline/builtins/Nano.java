@@ -1008,8 +1008,8 @@ public class Nano implements Editor {
             if (diagnostics != null) {
                 for (Diagnostic diagnostic : diagnostics) {
                     // TODO when they aren't on the same line
-                    if (diagnostic.getStartLine() == diagnostic.getEndColumn()) {
-                        int line = diagnostic.getEndColumn() - firstLineToDisplay;
+                    if (diagnostic.getStartLine() == diagnostic.getEndLine()) {
+                        int line = diagnostic.getEndLine() - firstLineToDisplay;
                         AttributedString attributedString = newLines.get(line);
                         AttributedStringBuilder builder = new AttributedStringBuilder(attributedString.length());
                         builder.append(attributedString.subSequence(0, diagnostic.getStartColumn()));
@@ -1040,7 +1040,7 @@ public class Nano implements Editor {
                             // TODO: display above current pos if there is no space at the bottom
                             Box box = new Box(
                                     xi,
-                                    diagnostic.getStartColumn() + 1,
+                                    diagnostic.getStartLine() + 1,
                                     xl,
                                     diagnostic.getStartLine() + boxLines.size() + 2);
                             box.setLines(boxLines);
