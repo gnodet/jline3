@@ -1,0 +1,411 @@
+/*
+ * Copyright (c) 2002-2025, the original author(s).
+ *
+ * This software is distributable under the BSD license. See the terms of the
+ * BSD license in the documentation provided with this software.
+ *
+ * https://opensource.org/licenses/BSD-3-Clause
+ */
+package org.jline.terminal.impl;
+
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import javax.imageio.ImageIO;
+
+import org.jline.terminal.Terminal;
+
+/**
+ * Utility class for handling Sixel graphics in terminals.
+ *
+ * <p>
+ * Sixel is a bitmap graphics format supported by some terminals that allows
+ * displaying raster graphics directly in the terminal. This class provides
+ * methods for converting images to Sixel format and displaying them on
+ * terminals that support Sixel graphics.
+ * </p>
+ *
+ * <p>
+ * The name "Sixel" comes from "six pixels" because each character cell
+ * represents 6 pixels arranged vertically.
+ * </p>
+ */
+public class SixelGraphics {
+
+    private static final String DCS = "\u001bP"; // Device Control String
+    private static final String ST = "\u001b\\"; // String Terminator
+    private static final String SIXEL_INTRO = "0;1;q"; // Sixel introduction with parameters
+    private static final int MAX_COLORS = 256; // Maximum number of colors in palette
+    private static final int DEFAULT_WIDTH = 800; // Default max width for images
+    private static final int DEFAULT_HEIGHT = 480; // Default max height for images
+
+    // User override for sixel support
+    private static Boolean sixelSupportOverride = null;
+
+    /**
+     * Sets an override for sixel support detection.
+     * This can be used to explicitly enable or disable sixel support,
+     * regardless of terminal detection.
+     *
+     * @param supported true to force enable sixel support, false to force disable,
+     *                 null to use automatic detection
+     */
+    public static void setSixelSupportOverride(Boolean supported) {
+        sixelSupportOverride = supported;
+    }
+
+    /**
+     * Checks if the terminal supports Sixel graphics.
+     *
+     * This method uses a combination of terminal type checking and environment
+     * variables to determine if the terminal supports Sixel graphics.
+     * The detection can be overridden using setSixelSupportOverride().
+     *
+     * @param terminal the terminal to check
+     * @return true if the terminal supports Sixel graphics, false otherwise
+     */
+    public static boolean isSixelSupported(Terminal terminal) {
+        // Check for user override first
+        if (sixelSupportOverride != null) {
+            return sixelSupportOverride;
+        }
+
+        // Check terminal type against known terminals that support sixel
+        String terminalType = terminal.getType().toLowerCase();
+
+        // List of terminals known to support sixel
+        Set<String> sixelTerminals = new HashSet<>(Arrays.asList(
+                "xterm",
+                "xterm-256color", // xterm since patch #359
+                "mintty", // mintty since 2.6.0
+                "foot", // foot since 1.2.0
+                "iterm2", // iTerm2 since 3.3.0
+                "konsole", // konsole since 22.04
+                "mlterm", // mlterm since 3.1.9
+                "wezterm", // wezterm since 20200620
+                "contour", // contour (all versions)
+                "domterm", // domterm since 2.0
+                "xfce4-terminal" // xfce-terminal since commit 493a7a5
+                ));
+
+        // Check for environment variables that might indicate sixel support
+        String termEnv = System.getenv("TERM");
+        String colorTerm = System.getenv("COLORTERM");
+        String termProgram = System.getenv("TERM_PROGRAM");
+        String termProgramVersion = System.getenv("TERM_PROGRAM_VERSION");
+
+        // Check for specific terminal programs that support sixel
+        if ("iTerm.app".equals(termProgram) && termProgramVersion != null) {
+            // iTerm2 supports sixel since version 3.3.0
+            try {
+                String[] versionParts = termProgramVersion.split("\\.");
+                if (versionParts.length >= 2) {
+                    int major = Integer.parseInt(versionParts[0]);
+                    int minor = Integer.parseInt(versionParts[1]);
+                    if (major > 3 || (major == 3 && minor >= 3)) {
+                        return true;
+                    }
+                }
+            } catch (NumberFormatException e) {
+                // Ignore parsing errors
+            }
+        }
+
+        // Check for XTerm with sixel support
+        if (termEnv != null && termEnv.startsWith("xterm")) {
+            // XTerm supports sixel since patch #359
+            // Unfortunately, there's no reliable way to detect the patch level
+            // from environment variables alone
+        }
+
+        // Check if terminal type is in our known list
+        return sixelTerminals.contains(terminalType);
+    }
+
+    /**
+     * Displays an image in Sixel format on the terminal.
+     *
+     * @param terminal the terminal to display the image on
+     * @param image the image to display
+     * @throws IOException if an I/O error occurs
+     */
+    public static void displayImage(Terminal terminal, BufferedImage image) throws IOException {
+        if (!isSixelSupported(terminal)) {
+            throw new UnsupportedOperationException("Terminal does not support Sixel graphics");
+        }
+
+        String sixelData = convertToSixel(image);
+        terminal.writer().print(sixelData);
+        terminal.writer().flush();
+    }
+
+    /**
+     * Displays an image file in Sixel format on the terminal.
+     *
+     * @param terminal the terminal to display the image on
+     * @param file the image file to display
+     * @throws IOException if an I/O error occurs
+     */
+    public static void displayImage(Terminal terminal, File file) throws IOException {
+        BufferedImage image = ImageIO.read(file);
+        displayImage(terminal, image);
+    }
+
+    /**
+     * Displays an image from an input stream in Sixel format on the terminal.
+     *
+     * @param terminal the terminal to display the image on
+     * @param inputStream the input stream containing the image data
+     * @throws IOException if an I/O error occurs
+     */
+    public static void displayImage(Terminal terminal, InputStream inputStream) throws IOException {
+        BufferedImage image = ImageIO.read(inputStream);
+        displayImage(terminal, image);
+    }
+
+    /**
+     * Converts a BufferedImage to Sixel format.
+     *
+     * @param image the image to convert
+     * @return a string containing the Sixel data
+     */
+    public static String convertToSixel(BufferedImage image) throws IOException {
+        // Resize the image if it's too large
+        BufferedImage resizedImage = resizeImageIfNeeded(image);
+
+        // Convert to indexed color if needed
+        BufferedImage indexedImage = convertToIndexedColor(resizedImage);
+
+        // Generate Sixel data
+        return generateSixelData(indexedImage);
+    }
+
+    /**
+     * Resizes an image if it's too large for terminal display.
+     * Uses high-quality scaling to maintain image quality.
+     *
+     * @param image the image to resize
+     * @return the resized image, or the original image if no resizing is needed
+     */
+    private static BufferedImage resizeImageIfNeeded(BufferedImage image) {
+        // Use the default max dimensions
+        return resizeImageIfNeeded(image, DEFAULT_WIDTH, DEFAULT_HEIGHT);
+    }
+
+    /**
+     * Resizes an image if it's too large for the specified dimensions.
+     * Uses high-quality scaling to maintain image quality.
+     *
+     * @param image the image to resize
+     * @param maxWidth the maximum width
+     * @param maxHeight the maximum height
+     * @return the resized image, or the original image if no resizing is needed
+     */
+    private static BufferedImage resizeImageIfNeeded(BufferedImage image, int maxWidth, int maxHeight) {
+        if (image.getWidth() <= maxWidth && image.getHeight() <= maxHeight) {
+            return image;
+        }
+
+        // Calculate new dimensions while maintaining aspect ratio
+        double scale = Math.min((double) maxWidth / image.getWidth(), (double) maxHeight / image.getHeight());
+
+        int newWidth = (int) (image.getWidth() * scale);
+        int newHeight = (int) (image.getHeight() * scale);
+
+        // Create a new image with transparency support if the original has it
+        int imageType = image.getTransparency() == BufferedImage.OPAQUE
+                ? BufferedImage.TYPE_INT_RGB
+                : BufferedImage.TYPE_INT_ARGB;
+
+        BufferedImage resized = new BufferedImage(newWidth, newHeight, imageType);
+        Graphics2D g = resized.createGraphics();
+
+        // Use high quality rendering
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // Draw the image with a white background if needed
+        if (imageType == BufferedImage.TYPE_INT_RGB) {
+            g.setColor(Color.WHITE);
+            g.fillRect(0, 0, newWidth, newHeight);
+        }
+
+        g.drawImage(image, 0, 0, newWidth, newHeight, null);
+        g.dispose();
+
+        return resized;
+    }
+
+    /**
+     * Converts an image to indexed color with a maximum of MAX_COLORS colors.
+     * Uses a better approach to color quantization to preserve image quality.
+     *
+     * @param image the image to convert
+     * @return the converted image
+     */
+    private static BufferedImage convertToIndexedColor(BufferedImage image) {
+        // First convert to RGB if it's not already
+        BufferedImage rgbImage;
+        if (image.getType() != BufferedImage.TYPE_INT_RGB) {
+            rgbImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
+            Graphics2D g = rgbImage.createGraphics();
+            g.setColor(Color.WHITE); // Set white background
+            g.fillRect(0, 0, image.getWidth(), image.getHeight());
+            g.drawImage(image, 0, 0, null);
+            g.dispose();
+        } else {
+            rgbImage = image;
+        }
+
+        // Create a color model with a maximum of MAX_COLORS colors
+        // We'll use Java's built-in color quantization but with some pre-processing
+        BufferedImage indexedImage =
+                new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_INDEXED);
+
+        // Draw the image with dithering to improve color representation
+        Graphics2D g = indexedImage.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_ENABLE);
+        g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g.drawImage(rgbImage, 0, 0, null);
+        g.dispose();
+
+        return indexedImage;
+    }
+
+    /**
+     * Generates Sixel data from an indexed color image.
+     * Uses optimized encoding to reduce size and improve display quality.
+     *
+     * @param image the indexed color image
+     * @return a string containing the Sixel data
+     */
+    private static String generateSixelData(BufferedImage image) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        // Start with DCS sequence and Sixel introduction
+        // Parameters: 0;1;q means:
+        // - 0: Pixel aspect ratio 1:1
+        // - 1: Background color is set to black
+        // - q: Sixel mode
+        baos.write((DCS + SIXEL_INTRO).getBytes(StandardCharsets.US_ASCII));
+
+        // Extract color palette
+        java.awt.image.IndexColorModel cm = (java.awt.image.IndexColorModel) image.getColorModel();
+        int colorCount = Math.min(cm.getMapSize(), MAX_COLORS);
+
+        // Define color palette - only include colors that are actually used
+        // This helps reduce the size of the Sixel data
+        boolean[] colorUsed = new boolean[colorCount];
+        int width = image.getWidth();
+        int height = image.getHeight();
+
+        // First scan to find used colors
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int pixel = image.getRGB(x, y) & 0xFFFFFF;
+                int colorIndex = findClosestColorIndex(cm, pixel);
+                if (colorIndex < colorCount) {
+                    colorUsed[colorIndex] = true;
+                }
+            }
+        }
+
+        // Define only the colors that are used
+        for (int i = 0; i < colorCount; i++) {
+            if (colorUsed[i]) {
+                int r = cm.getRed(i);
+                int g = cm.getGreen(i);
+                int b = cm.getBlue(i);
+
+                // Sixel color definition: "#" + color_index + ";" + color_spec + ";" + r + ";" + g + ";" + b
+                String colorDef = String.format("#%d;2;%d;%d;%d", i, r, g, b);
+                baos.write(colorDef.getBytes(StandardCharsets.US_ASCII));
+            }
+        }
+
+        // Process image data in 6-pixel-high strips
+        for (int y = 0; y < height; y += 6) {
+            // For each column in this strip
+            for (int x = 0; x < width; x++) {
+                int currentColor = -1;
+                int sixelData = 0;
+
+                // Collect 6 vertical pixels
+                for (int subY = 0; subY < 6; subY++) {
+                    if (y + subY < height) {
+                        int pixel = image.getRGB(x, y + subY) & 0xFFFFFF;
+                        int colorIndex = findClosestColorIndex(cm, pixel);
+
+                        if (currentColor != colorIndex) {
+                            // If we've collected data for the previous color, output it
+                            if (currentColor != -1 && sixelData > 0) {
+                                baos.write(String.format("#%d%c", currentColor, sixelData + 63)
+                                        .getBytes(StandardCharsets.US_ASCII));
+                            }
+
+                            currentColor = colorIndex;
+                            sixelData = 0;
+                        }
+
+                        // Set the bit for this pixel
+                        sixelData |= (1 << subY);
+                    }
+                }
+
+                // Output the last collected data
+                if (currentColor != -1 && sixelData > 0) {
+                    baos.write(
+                            String.format("#%d%c", currentColor, sixelData + 63).getBytes(StandardCharsets.US_ASCII));
+                }
+            }
+
+            // End of line
+            baos.write('-');
+        }
+
+        // End Sixel data with ST sequence
+        baos.write(ST.getBytes(StandardCharsets.US_ASCII));
+
+        return baos.toString(StandardCharsets.US_ASCII.name());
+    }
+
+    /**
+     * Finds the closest color in the color model to the given RGB value.
+     *
+     * @param cm the color model
+     * @param rgb the RGB value
+     * @return the index of the closest color
+     */
+    private static int findClosestColorIndex(java.awt.image.IndexColorModel cm, int rgb) {
+        int r = (rgb >> 16) & 0xFF;
+        int g = (rgb >> 8) & 0xFF;
+        int b = rgb & 0xFF;
+
+        int closestIndex = 0;
+        int closestDistance = Integer.MAX_VALUE;
+
+        for (int i = 0; i < cm.getMapSize(); i++) {
+            int cr = cm.getRed(i);
+            int cg = cm.getGreen(i);
+            int cb = cm.getBlue(i);
+
+            // Simple Euclidean distance in RGB space
+            int distance = (r - cr) * (r - cr) + (g - cg) * (g - cg) + (b - cb) * (b - cb);
+
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestIndex = i;
+            }
+        }
+
+        return closestIndex;
+    }
+}
