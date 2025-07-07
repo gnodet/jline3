@@ -14,7 +14,6 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
@@ -114,7 +113,7 @@ public class SixelGraphicsTest {
         // Verify basic structure
         assertTrue(sixelData.startsWith("\u001bP0;1;q"));
         assertTrue(sixelData.endsWith("\u001b\\"));
-        
+
         // Should contain color definition for red
         assertTrue(sixelData.contains("#"));
     }
@@ -134,7 +133,7 @@ public class SixelGraphicsTest {
     public void testDisplayImageSupportedTerminal() throws IOException {
         // Force enable sixel support
         SixelGraphics.setSixelSupportOverride(true);
-        
+
         Terminal terminal = createMockTerminal("xterm");
         BufferedImage image = new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = image.createGraphics();
@@ -218,10 +217,7 @@ public class SixelGraphicsTest {
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             ByteArrayInputStream input = new ByteArrayInputStream(new byte[0]);
 
-            return TerminalBuilder.builder()
-                    .type(type)
-                    .streams(input, output)
-                    .build();
+            return TerminalBuilder.builder().type(type).streams(input, output).build();
         } catch (IOException e) {
             throw new RuntimeException("Failed to create mock terminal", e);
         }

@@ -81,7 +81,7 @@ public class DoubleSizeCharactersTest {
 
         DoubleSizeCharacters.printNormal(terminal, "Test text");
         String result = output.toString(StandardCharsets.UTF_8.name());
-        
+
         assertTrue(result.contains("\u001b#5"), "Should set normal mode");
         assertTrue(result.contains("Test text"), "Should contain the text");
     }
@@ -93,7 +93,7 @@ public class DoubleSizeCharactersTest {
 
         DoubleSizeCharacters.printDoubleWidth(terminal, "Wide text");
         String result = output.toString(StandardCharsets.UTF_8.name());
-        
+
         assertTrue(result.contains("\u001b#6"), "Should set double width mode");
         assertTrue(result.contains("Wide text"), "Should contain the text");
     }
@@ -105,7 +105,7 @@ public class DoubleSizeCharactersTest {
 
         DoubleSizeCharacters.printDoubleHeight(terminal, "Tall text");
         String result = output.toString(StandardCharsets.UTF_8.name());
-        
+
         assertTrue(result.contains("\u001b#3"), "Should set double height top mode");
         assertTrue(result.contains("\u001b#4"), "Should set double height bottom mode");
         assertTrue(result.contains("\u001b#5"), "Should reset to normal mode");
@@ -119,7 +119,7 @@ public class DoubleSizeCharactersTest {
 
         DoubleSizeCharacters.printBanner(terminal, "Banner", '*');
         String result = output.toString(StandardCharsets.UTF_8.name());
-        
+
         assertTrue(result.contains("Banner"), "Should contain the banner text");
         assertTrue(result.contains("*"), "Should contain the border character");
         assertTrue(result.contains("\u001b#"), "Should contain double-size escape sequences");
@@ -132,7 +132,7 @@ public class DoubleSizeCharactersTest {
 
         DoubleSizeCharacters.printBanner(terminal, "Banner", '*');
         String result = output.toString(StandardCharsets.UTF_8.name());
-        
+
         assertTrue(result.contains("Banner"), "Should contain the banner text");
         assertTrue(result.contains("*"), "Should contain the border character");
         // Should not contain double-size escape sequences for unsupported terminal
@@ -145,7 +145,7 @@ public class DoubleSizeCharactersTest {
 
         DoubleSizeCharacters.reset(terminal);
         String result = output.toString(StandardCharsets.UTF_8.name());
-        
+
         assertTrue(result.contains("\u001b#5"), "Should reset to normal mode");
     }
 
@@ -173,10 +173,7 @@ public class DoubleSizeCharactersTest {
      */
     private Terminal createMockTerminalWithOutput(String type, ByteArrayOutputStream output) throws IOException {
         ByteArrayInputStream input = new ByteArrayInputStream(new byte[0]);
-        
-        return TerminalBuilder.builder()
-                .type(type)
-                .streams(input, output)
-                .build();
+
+        return TerminalBuilder.builder().type(type).streams(input, output).build();
     }
 }

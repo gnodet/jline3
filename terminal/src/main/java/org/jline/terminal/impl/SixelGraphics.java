@@ -364,8 +364,7 @@ public class SixelGraphics {
 
                 // Sixel color definition: "#" + color_index + ";" + color_spec + ";" + r + ";" + g + ";" + b
                 // RGB values need to be scaled to 0-100 range
-                String colorDef = String.format("#%d;2;%d;%d;%d", i,
-                    (r * 100) / 255, (g * 100) / 255, (b * 100) / 255);
+                String colorDef = String.format("#%d;2;%d;%d;%d", i, (r * 100) / 255, (g * 100) / 255, (b * 100) / 255);
                 baos.write(colorDef.getBytes(StandardCharsets.US_ASCII));
             }
         }

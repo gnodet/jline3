@@ -19,8 +19,8 @@ import java.io.InputStream;
 
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
-import org.jline.terminal.impl.SixelGraphics;
 import org.jline.terminal.impl.DoubleSizeCharacters;
+import org.jline.terminal.impl.SixelGraphics;
 
 /**
  * Example demonstrating terminal graphics features including Sixel graphics and double-size characters.
@@ -249,6 +249,8 @@ public class TerminalGraphicsExample {
                 terminal.writer().println("  --banner [text]  Create a banner with double-size characters");
                 terminal.writer().println("  <image-path>     Display the specified image file");
             }
+
+            terminal.flush();
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -60,13 +60,13 @@ public class DoubleSizeCharacters {
      */
     public static boolean isDoubleSizeSupported(Terminal terminal) {
         String terminalType = terminal.getType().toLowerCase();
-        
+
         // Most VT100-compatible terminals support double-size characters
-        return terminalType.contains("xterm") ||
-               terminalType.contains("vt") ||
-               terminalType.contains("ansi") ||
-               terminalType.contains("screen") ||
-               terminalType.contains("tmux");
+        return terminalType.contains("xterm")
+                || terminalType.contains("vt")
+                || terminalType.contains("ansi")
+                || terminalType.contains("screen")
+                || terminalType.contains("tmux");
     }
 
     /**
@@ -95,7 +95,7 @@ public class DoubleSizeCharacters {
                 sequence = NORMAL_SIZE;
                 break;
         }
-        
+
         terminal.writer().print(sequence);
         terminal.writer().flush();
     }
@@ -137,11 +137,11 @@ public class DoubleSizeCharacters {
         // Print top half
         setMode(terminal, Mode.DOUBLE_HEIGHT_TOP);
         terminal.writer().println(text);
-        
+
         // Print bottom half
         setMode(terminal, Mode.DOUBLE_HEIGHT_BOTTOM);
         terminal.writer().println(text);
-        
+
         // Reset to normal
         setMode(terminal, Mode.NORMAL);
     }
@@ -167,16 +167,16 @@ public class DoubleSizeCharacters {
 
         // Create border line
         String border = new String(new char[text.length() + 4]).replace('\0', borderChar);
-        
+
         // Print top border in double width
         printDoubleWidth(terminal, border);
-        
+
         // Print text in double height
         printDoubleHeight(terminal, borderChar + " " + text + " " + borderChar);
-        
+
         // Print bottom border in double width
         printDoubleWidth(terminal, border);
-        
+
         // Reset to normal
         setMode(terminal, Mode.NORMAL);
     }
