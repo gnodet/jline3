@@ -114,15 +114,15 @@ public class PromptDynamicExample {
         // Step 2: Product-specific prompts
         Map<String, ? extends PromptResult<? extends Prompt>> step2;
         if ("pizza".equals(product)) {
-            step2 = pizzaPrompts(prompter);
+            step2 = pizzaPrompts(prompter, header);
         } else {
-            step2 = hamburgerPrompts(prompter);
+            step2 = hamburgerPrompts(prompter, header);
         }
 
         if (step2.isEmpty()) return step2; // User cancelled
 
         // Step 3: Final prompts (payment and delivery)
-        Map<String, ? extends PromptResult<? extends Prompt>> step3 = finalPrompts(prompter);
+        Map<String, ? extends PromptResult<? extends Prompt>> step3 = finalPrompts(prompter, header);
         if (step3.isEmpty()) return step3; // User cancelled
 
         // Combine all results
@@ -134,8 +134,8 @@ public class PromptDynamicExample {
         return allResults;
     }
 
-    private static Map<String, ? extends PromptResult<? extends Prompt>> pizzaPrompts(Prompter prompter)
-            throws IOException {
+    private static Map<String, ? extends PromptResult<? extends Prompt>> pizzaPrompts(
+            Prompter prompter, List<AttributedString> originalHeader) throws IOException {
         List<AttributedString> header = Arrays.asList(new AttributedStringBuilder()
                 .style(ITALIC_GREEN)
                 .append("Pizza time!")
@@ -185,8 +185,8 @@ public class PromptDynamicExample {
         return prompter.prompt(header, builder.build());
     }
 
-    private static Map<String, ? extends PromptResult<? extends Prompt>> hamburgerPrompts(Prompter prompter)
-            throws IOException {
+    private static Map<String, ? extends PromptResult<? extends Prompt>> hamburgerPrompts(
+            Prompter prompter, List<AttributedString> originalHeader) throws IOException {
         List<AttributedString> header = Arrays.asList(new AttributedStringBuilder()
                 .style(ITALIC_GREEN)
                 .append("Hamburger time!")
@@ -226,8 +226,8 @@ public class PromptDynamicExample {
         return prompter.prompt(header, builder.build());
     }
 
-    private static Map<String, ? extends PromptResult<? extends Prompt>> finalPrompts(Prompter prompter)
-            throws IOException {
+    private static Map<String, ? extends PromptResult<? extends Prompt>> finalPrompts(
+            Prompter prompter, List<AttributedString> originalHeader) throws IOException {
         List<AttributedString> header = Arrays.asList(
                 new AttributedStringBuilder()
                         .style(BOLD_RED)
