@@ -94,7 +94,7 @@ public class TerminalGraphicsTest {
         // Test each protocol's image conversion
         KittyGraphics kitty = new KittyGraphics();
         ITerm2Graphics iterm2 = new ITerm2Graphics();
-        SixelGraphicsImpl sixel = new SixelGraphicsImpl();
+        SixelGraphics sixel = new SixelGraphics();
 
         ImageOptions options = new ImageOptions();
 
@@ -120,7 +120,7 @@ public class TerminalGraphicsTest {
 
     @Test
     void testImageOptions() throws IOException {
-        SixelGraphicsImpl sixel = new SixelGraphicsImpl();
+        SixelGraphics sixel = new SixelGraphics();
 
         // Test with width and height options
         ImageOptions options = new ImageOptions().width(50).height(50).preserveAspectRatio(false);

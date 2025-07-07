@@ -23,7 +23,7 @@ import javax.imageio.ImageIO;
 import org.jline.terminal.Terminal;
 
 /**
- * Utility class for handling Sixel graphics in terminals.
+ * Implementation of the Sixel Graphics Protocol.
  *
  * <p>
  * Sixel is a bitmap graphics format supported by some terminals that allows
@@ -36,8 +36,20 @@ import org.jline.terminal.Terminal;
  * The name "Sixel" comes from "six pixels" because each character cell
  * represents 6 pixels arranged vertically.
  * </p>
+ *
+ * <p>Sixel graphics are supported by many terminals including:</p>
+ * <ul>
+ *   <li>xterm</li>
+ *   <li>iTerm2</li>
+ *   <li>foot</li>
+ *   <li>WezTerm</li>
+ *   <li>Konsole</li>
+ *   <li>VS Code (with enableImages setting)</li>
+ * </ul>
+ *
+ * @since 3.30.0
  */
-public class SixelGraphics {
+public class SixelGraphics implements TerminalGraphics {
 
     private static final String DCS = "\u001bP"; // Device Control String
     private static final String ST = "\u001b\\"; // String Terminator
@@ -456,5 +468,116 @@ public class SixelGraphics {
         }
 
         return closestIndex;
+    }
+
+    // TerminalGraphics interface implementation
+
+    @Override
+    public Protocol getProtocol() {
+        return Protocol.SIXEL;
+    }
+
+    @Override
+    public int getPriority() {
+        return 10; // Lower priority than Kitty and iTerm2
+    }
+
+    @Override
+    public boolean isSupported(Terminal terminal) {
+        return isSixelSupported(terminal);
+    }
+
+    @Override
+    public void displayImage(Terminal terminal, BufferedImage image) throws IOException {
+        SixelGraphics.displayImage(terminal, image);
+    }
+
+    @Override
+    public void displayImage(Terminal terminal, File file) throws IOException {
+        SixelGraphics.displayImage(terminal, file);
+    }
+
+    @Override
+    public void displayImage(Terminal terminal, InputStream inputStream) throws IOException {
+        SixelGraphics.displayImage(terminal, inputStream);
+    }
+
+    @Override
+    public void displayImage(Terminal terminal, BufferedImage image, int maxWidth, int maxHeight) throws IOException {
+        // Resize image if needed
+        BufferedImage resizedImage = resizeImageIfNeeded(image, maxWidth, maxHeight);
+        SixelGraphics.displayImage(terminal, resizedImage);
+    }
+
+    @Override
+    public void displayImage(Terminal terminal, BufferedImage image, TerminalGraphics.ImageOptions options) throws IOException {
+        BufferedImage processedImage = image;
+
+        // Apply size options if specified
+        if (options.getWidth() != null || options.getHeight() != null) {
+            int targetWidth = options.getWidth() != null ? options.getWidth() : image.getWidth();
+            int targetHeight = options.getHeight() != null ? options.getHeight() : image.getHeight();
+
+            if (options.getPreserveAspectRatio() != null && options.getPreserveAspectRatio()) {
+                // Calculate dimensions preserving aspect ratio
+                double aspectRatio = (double) image.getWidth() / image.getHeight();
+                if (options.getWidth() != null && options.getHeight() == null) {
+                    targetHeight = (int) (targetWidth / aspectRatio);
+                } else if (options.getHeight() != null && options.getWidth() == null) {
+                    targetWidth = (int) (targetHeight * aspectRatio);
+                }
+            }
+
+            processedImage = resizeImageIfNeeded(image, targetWidth, targetHeight);
+        }
+
+        SixelGraphics.displayImage(terminal, processedImage);
+    }
+
+    @Override
+    public void displayImage(Terminal terminal, File file, TerminalGraphics.ImageOptions options) throws IOException {
+        BufferedImage image = ImageIO.read(file);
+        displayImage(terminal, image, options);
+    }
+
+    @Override
+    public void displayImage(Terminal terminal, InputStream inputStream, TerminalGraphics.ImageOptions options) throws IOException {
+        BufferedImage image = ImageIO.read(inputStream);
+        displayImage(terminal, image, options);
+    }
+
+    @Override
+    public String convertImage(BufferedImage image, TerminalGraphics.ImageOptions options) throws IOException {
+        BufferedImage processedImage = image;
+
+        // Apply size options if specified
+        if (options.getWidth() != null || options.getHeight() != null) {
+            int targetWidth = options.getWidth() != null ? options.getWidth() : image.getWidth();
+            int targetHeight = options.getHeight() != null ? options.getHeight() : image.getHeight();
+
+            if (options.getPreserveAspectRatio() != null && options.getPreserveAspectRatio()) {
+                // Calculate dimensions preserving aspect ratio
+                double aspectRatio = (double) image.getWidth() / image.getHeight();
+                if (options.getWidth() != null && options.getHeight() == null) {
+                    targetHeight = (int) (targetWidth / aspectRatio);
+                } else if (options.getHeight() != null && options.getWidth() == null) {
+                    targetWidth = (int) (targetHeight * aspectRatio);
+                }
+            }
+
+            processedImage = resizeImageIfNeeded(image, targetWidth, targetHeight);
+        }
+
+        return convertToSixel(processedImage);
+    }
+
+    @Override
+    public String getName() {
+        return getProtocol().getName();
+    }
+
+    @Override
+    public String getDescription() {
+        return "Sixel graphics protocol - widely supported bitmap format";
     }
 }

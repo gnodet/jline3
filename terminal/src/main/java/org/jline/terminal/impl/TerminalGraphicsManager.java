@@ -48,7 +48,7 @@ public class TerminalGraphicsManager {
         // Register built-in protocols
         registerProtocol(new KittyGraphics());
         registerProtocol(new ITerm2Graphics());
-        registerProtocol(new SixelGraphicsImpl());
+        registerProtocol(new SixelGraphics());
 
         // Load additional protocols via ServiceLoader
         ServiceLoader<TerminalGraphics> loader = ServiceLoader.load(TerminalGraphics.class);
