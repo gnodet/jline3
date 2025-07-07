@@ -147,7 +147,54 @@ public class DefaultPrompter implements Prompter {
     @Override
     public Map<String, ? extends PromptResult<? extends Prompt>> prompt(
             List<AttributedString> header, List<? extends Prompt> prompts) throws IOException, UserInterruptException {
-        return executePrompts(header, prompts);
+        // Handle empty prompt list directly
+        if (prompts == null || prompts.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        // Simple implementation for static lists that follows ConsolePrompt patterns
+        Map<String, PromptResult<? extends Prompt>> resultMap = new HashMap<>();
+
+        try {
+            open();
+
+            // Initialize header from input (like ConsolePrompt)
+            if (header != null) {
+                this.header.clear();
+                this.header.addAll(header);
+            }
+
+            // Execute each prompt sequentially
+            for (Prompt prompt : prompts) {
+                try {
+                    PromptResult<? extends Prompt> result = promptElement(this.header, prompt, null);
+                    if (result != null) {
+                        resultMap.put(prompt.getName(), result);
+
+                        // Add result to header for next prompt (like ConsolePrompt)
+                        if (!(prompt instanceof TextPrompt)) {
+                            String resp = result.getResult();
+                            if (result instanceof ConfirmResult) {
+                                ConfirmResult cr = (ConfirmResult) result;
+                                resp = cr.getConfirmed() == ConfirmResult.ConfirmationValue.YES ? "Yes" : "No";
+                            }
+                            AttributedStringBuilder message = createMessage(prompt.getMessage(), resp);
+                            this.header.add(message.toAttributedString());
+                        }
+                    }
+                } catch (UserInterruptException e) {
+                    throw e;
+                } catch (Exception e) {
+                    // Log error and continue
+                    terminal.writer().println("Error executing prompt '" + prompt.getName() + "': " + e.getMessage());
+                    terminal.flush();
+                }
+            }
+
+            return removeNoResults(resultMap);
+        } finally {
+            close();
+        }
     }
 
     @Override
@@ -345,45 +392,6 @@ public class DefaultPrompter implements Prompter {
             terminal.writer().println("Error: " + e.getMessage());
             terminal.flush();
             return null;
-        }
-    }
-
-    /**
-     * Execute a list of prompts and return results.
-     */
-    private Map<String, ? extends PromptResult<? extends Prompt>> executePrompts(
-            List<AttributedString> header, List<? extends Prompt> prompts) throws IOException, UserInterruptException {
-
-        if (prompts == null || prompts.isEmpty()) {
-            return new HashMap<>();
-        }
-
-        try {
-            open();
-            Map<String, PromptResult<? extends Prompt>> results = new HashMap<>();
-
-            // Display header only once at the beginning
-            displayHeader(header);
-
-            for (Prompt prompt : prompts) {
-                try {
-                    PromptResult<? extends Prompt> result = executePrompt(null, prompt); // Don't repeat header
-                    if (result != null) {
-                        results.put(prompt.getName(), result);
-                    }
-                } catch (UserInterruptException e) {
-                    // Re-throw user interruption
-                    throw e;
-                } catch (Exception e) {
-                    // Log error and continue with next prompt
-                    terminal.writer().println("Error executing prompt '" + prompt.getName() + "': " + e.getMessage());
-                    terminal.flush();
-                }
-            }
-
-            return results;
-        } finally {
-            close();
         }
     }
 
