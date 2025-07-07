@@ -68,6 +68,7 @@ public class DefaultPrompter implements Prompter {
     private int lines = 1;
     private boolean rowsFirst = true; // true = row-first layout, false = column-first
     private static final int MARGIN_BETWEEN_COLUMNS = 2;
+    private static final int MIN_ITEMS_FOR_MULTICOLUMN = 4; // Minimum items to enable multi-column layout
 
     /**
      * Create a new DefaultPrompter with the given terminal.
@@ -1051,6 +1052,13 @@ public class DefaultPrompter implements Prompter {
         if (items.isEmpty()) {
             columns = 1;
             lines = 1;
+            return;
+        }
+
+        // Use single column for small number of items (like console-ui behavior)
+        if (items.size() < MIN_ITEMS_FOR_MULTICOLUMN) {
+            columns = 1;
+            lines = items.size();
             return;
         }
 

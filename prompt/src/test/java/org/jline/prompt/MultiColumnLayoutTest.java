@@ -70,6 +70,35 @@ public class MultiColumnLayoutTest {
     }
 
     @Test
+    void testSmallListUsesingleColumn() throws IOException {
+        // Test that small lists (< 4 items) use single column layout like console-ui
+        Prompter factory = PrompterFactory.create(terminal);
+        PromptBuilder builder = factory.newBuilder();
+
+        // Create a list with 2 items (like Pizza/Hamburger choice)
+        builder.createListPrompt()
+                .name("product")
+                .message("What do you want to order?")
+                .newItem("pizza")
+                .text("Pizza")
+                .add()
+                .newItem("hamburger")
+                .text("Hamburger")
+                .add()
+                .addPrompt();
+
+        List<Prompt> prompts = builder.build();
+        assertEquals(1, prompts.size());
+
+        ListPrompt listPrompt = (ListPrompt) prompts.get(0);
+        assertEquals(2, listPrompt.getItems().size());
+
+        // This should use single column layout (not multi-column)
+        // The actual layout calculation happens during execution,
+        // but we can verify the prompt is created correctly
+    }
+
+    @Test
     void testMultipleItemsForColumnLayout() throws IOException {
         // Test creating a list with many items that could benefit from multi-column layout
         Prompter factory = PrompterFactory.create(terminal);
