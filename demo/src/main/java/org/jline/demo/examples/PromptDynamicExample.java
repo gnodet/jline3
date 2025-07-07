@@ -8,12 +8,12 @@
  */
 package org.jline.demo.examples;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import org.jline.prompt.*;
+import org.jline.prompt.impl.DefaultPromptBuilder;
 import org.jline.reader.UserInterruptException;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
@@ -64,8 +64,9 @@ public class PromptDynamicExample {
                             "for querying information from the user. This API is inspired by Inquirer.js and replaces"),
                     new AttributedString("the deprecated ConsoleUI module."));
 
-            // Start the dynamic prompt flow
-            Map<String, ? extends PromptResult<? extends Prompt>> results = runDynamicPrompts(prompter, header);
+            // Start the dynamic prompt flow using the proper dynamic prompting API
+            Map<String, ? extends PromptResult<? extends Prompt>> results =
+                    prompter.prompt(header, PromptDynamicExample::createDynamicPrompts);
 
             System.out.println("result = " + results);
             if (results.isEmpty()) {
@@ -83,18 +84,51 @@ public class PromptDynamicExample {
         }
     }
 
-    private static Map<String, ? extends PromptResult<? extends Prompt>> runDynamicPrompts(
-            Prompter prompter, List<AttributedString> header) throws IOException {
+    /**
+     * Dynamic prompt provider that creates prompts based on previous results.
+     */
+    private static List<? extends Prompt> createDynamicPrompts(
+            Map<String, ? extends PromptResult<? extends Prompt>> previousResults) {
 
-        // Step 1: Initial prompts (name and product choice)
-        PromptBuilder builder1 = prompter.newBuilder();
-        builder1.createInputPrompt()
+        // Step 1: If no previous results, start with initial prompts
+        if (previousResults.isEmpty()) {
+            return createInitialPrompts();
+        }
+
+        // Step 2: If we have name and product, create product-specific prompts
+        if (previousResults.containsKey("name")
+                && previousResults.containsKey("product")
+                && !previousResults.containsKey("pizzatype")
+                && !previousResults.containsKey("hamburgertype")) {
+
+            String product = ((ListResult) previousResults.get("product")).getSelectedId();
+            if ("pizza".equals(product)) {
+                return createPizzaPrompts();
+            } else {
+                return createHamburgerPrompts();
+            }
+        }
+
+        // Step 3: If we have product-specific results, create final prompts
+        if ((previousResults.containsKey("pizzatype") || previousResults.containsKey("hamburgertype"))
+                && !previousResults.containsKey("payment")) {
+            return createFinalPrompts();
+        }
+
+        // No more prompts needed
+        return null;
+    }
+
+    private static List<? extends Prompt> createInitialPrompts() {
+        PromptBuilder builder = new DefaultPromptBuilder();
+
+        builder.createInputPrompt()
                 .name("name")
                 .message("Please enter your name")
                 .defaultValue("John Doe")
                 .addPrompt();
 
-        builder1.createListPrompt()
+        builder.createListPrompt()
                 .name("product")
                 .message("What do you want to order?")
                 .newItem("pizza")
@@ -105,43 +139,11 @@ public class PromptDynamicExample {
                 .add()
                 .addPrompt();
 
-        Map<String, ? extends PromptResult<? extends Prompt>> step1 = prompter.prompt(header, builder1.build());
-
-        if (step1.isEmpty()) return step1; // User cancelled
-
-        String product = ((ListResult) step1.get("product")).getSelectedId();
-
-        // Step 2: Product-specific prompts
-        Map<String, ? extends PromptResult<? extends Prompt>> step2;
-        if ("pizza".equals(product)) {
-            step2 = pizzaPrompts(prompter, header);
-        } else {
-            step2 = hamburgerPrompts(prompter, header);
-        }
-
-        if (step2.isEmpty()) return step2; // User cancelled
-
-        // Step 3: Final prompts (payment and delivery)
-        Map<String, ? extends PromptResult<? extends Prompt>> step3 = finalPrompts(prompter, header);
-        if (step3.isEmpty()) return step3; // User cancelled
-
-        // Combine all results
-        Map<String, PromptResult<? extends Prompt>> allResults = new java.util.HashMap<>();
-        allResults.putAll(step1);
-        allResults.putAll(step2);
-        allResults.putAll(step3);
-
-        return allResults;
+        return builder.build();
     }
 
-    private static Map<String, ? extends PromptResult<? extends Prompt>> pizzaPrompts(
-            Prompter prompter, List<AttributedString> originalHeader) throws IOException {
-        List<AttributedString> header = Arrays.asList(new AttributedStringBuilder()
-                .style(ITALIC_GREEN)
-                .append("Pizza time!")
-                .toAttributedString());
-
-        PromptBuilder builder = prompter.newBuilder();
+    private static List<? extends Prompt> createPizzaPrompts() {
+        PromptBuilder builder = new DefaultPromptBuilder();
 
         builder.createListPrompt()
                 .name("pizzatype")
@@ -182,17 +184,11 @@ public class PromptDynamicExample {
                 .add()
                 .addPrompt();
 
-        return prompter.prompt(header, builder.build());
+        return builder.build();
     }
 
-    private static Map<String, ? extends PromptResult<? extends Prompt>> hamburgerPrompts(
-            Prompter prompter, List<AttributedString> originalHeader) throws IOException {
-        List<AttributedString> header = Arrays.asList(new AttributedStringBuilder()
-                .style(ITALIC_GREEN)
-                .append("Hamburger time!")
-                .toAttributedString());
-
-        PromptBuilder builder = prompter.newBuilder();
+    private static List<? extends Prompt> createHamburgerPrompts() {
+        PromptBuilder builder = new DefaultPromptBuilder();
 
         builder.createListPrompt()
                 .name("hamburgertype")
@@ -223,26 +219,11 @@ public class PromptDynamicExample {
                 .add()
                 .addPrompt();
 
-        return prompter.prompt(header, builder.build());
+        return builder.build();
     }
 
-    private static Map<String, ? extends PromptResult<? extends Prompt>> finalPrompts(
-            Prompter prompter, List<AttributedString> originalHeader) throws IOException {
-        List<AttributedString> header = Arrays.asList(
-                new AttributedStringBuilder()
-                        .style(BOLD_RED)
-                        .append("###################")
-                        .toAttributedString(),
-                new AttributedStringBuilder()
-                        .style(ITALIC_GREEN)
-                        .append("Finalize your order")
-                        .toAttributedString(),
-                new AttributedStringBuilder()
-                        .style(BOLD_RED)
-                        .append("###################")
-                        .toAttributedString());
-
-        PromptBuilder builder = prompter.newBuilder();
+    private static List<? extends Prompt> createFinalPrompts() {
+        PromptBuilder builder = new DefaultPromptBuilder();
 
         builder.createListPrompt()
                 .name("payment")
@@ -267,6 +248,6 @@ public class PromptDynamicExample {
                 .defaultValue(true)
                 .addPrompt();
 
-        return prompter.prompt(header, builder.build());
+        return builder.build();
     }
 }
