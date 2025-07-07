@@ -16,14 +16,56 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
+import java.util.Optional;
+import javax.imageio.ImageIO;
 
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import org.jline.terminal.impl.DoubleSizeCharacters;
 import org.jline.terminal.impl.SixelGraphics;
+import org.jline.terminal.impl.TerminalGraphics;
+import org.jline.terminal.impl.TerminalGraphicsManager;
 
 /**
- * Example demonstrating terminal graphics features including Sixel graphics and double-size characters.
+ * Example demonstrating how to use terminal graphics in JLine.
+ *
+ * <p>This example shows how to display images in the terminal using various graphics
+ * protocols. JLine supports multiple terminal graphics protocols and automatically
+ * selects the best available option for your terminal.</p>
+ *
+ * <p>Supported graphics protocols:</p>
+ * <ul>
+ *   <li><strong>Kitty Graphics Protocol</strong> - Modern, feature-rich protocol (Kitty, WezTerm)</li>
+ *   <li><strong>iTerm2 Inline Images</strong> - iTerm2's proprietary protocol (iTerm2)</li>
+ *   <li><strong>Sixel</strong> - Widely supported legacy protocol (xterm, iTerm2, foot, WezTerm, Konsole, VS Code)</li>
+ * </ul>
+ *
+ * <p>Usage examples:</p>
+ * <pre>
+ * # Display the default test image using the best available protocol
+ * java SixelExample
+ *
+ * # Force enable Sixel support (for testing)
+ * java SixelExample --force-enable
+ *
+ * # Display a test image
+ * java SixelExample --test-image
+ *
+ * # Display double-size characters
+ * java SixelExample --double-size
+ *
+ * # Create a banner with text
+ * java SixelExample --banner "Hello World"
+ *
+ * # Force use of a specific protocol
+ * java SixelExample --protocol kitty
+ * java SixelExample --protocol iterm2
+ * java SixelExample --protocol sixel
+ *
+ * # Show supported protocols for this terminal
+ * java SixelExample --list-protocols
+ * </pre>
  */
 public class TerminalGraphicsExample {
 
@@ -179,7 +221,119 @@ public class TerminalGraphicsExample {
     }
 
     /**
-     * Main method to demonstrate Sixel graphics and double-size characters.
+     * Displays an image using the best available graphics protocol.
+     * This method automatically detects which graphics protocols are supported
+     * and uses the highest priority one.
+     *
+     * @param terminal the terminal to display the image on
+     * @param image the image to display
+     * @throws IOException if an I/O error occurs
+     */
+    public static void displayImageWithBestProtocol(Terminal terminal, BufferedImage image) throws IOException {
+        Optional<TerminalGraphics> protocol = TerminalGraphicsManager.getBestProtocol(terminal);
+        if (protocol.isPresent()) {
+            terminal.writer().println("Using " + protocol.get().getProtocol().getName() + " graphics protocol");
+            protocol.get().displayImage(terminal, image);
+        } else {
+            terminal.writer().println("No graphics protocol supported by this terminal");
+            listSupportedTerminals(terminal);
+        }
+    }
+
+    /**
+     * Lists all available graphics protocols and their support status.
+     *
+     * @param terminal the terminal to check
+     */
+    public static void listProtocolSupport(Terminal terminal) {
+        terminal.writer().println("Graphics Protocol Support:");
+        terminal.writer().println("=========================");
+
+        List<TerminalGraphics> allProtocols = TerminalGraphicsManager.getAvailableProtocols();
+        List<TerminalGraphics> supportedProtocols = TerminalGraphicsManager.getSupportedProtocols(terminal);
+
+        for (TerminalGraphics protocol : allProtocols) {
+            boolean supported = supportedProtocols.contains(protocol);
+            String status = supported ? "✓ SUPPORTED" : "✗ Not supported";
+            terminal.writer()
+                    .printf(
+                            "  %-15s (Priority: %2d) - %s%n",
+                            protocol.getProtocol().getName(), protocol.getPriority(), status);
+        }
+
+        terminal.writer().println();
+        Optional<TerminalGraphics> best = TerminalGraphicsManager.getBestProtocol(terminal);
+        if (best.isPresent()) {
+            terminal.writer()
+                    .println("Best protocol for this terminal: "
+                            + best.get().getProtocol().getName());
+        } else {
+            terminal.writer().println("No graphics protocols supported by this terminal");
+        }
+    }
+
+    /**
+     * Forces the use of a specific graphics protocol.
+     *
+     * @param protocolName the name of the protocol to force ("kitty", "iterm2", "sixel")
+     * @param terminal the terminal to use
+     * @param image the image to display
+     * @throws IOException if an I/O error occurs
+     */
+    public static void displayImageWithProtocol(String protocolName, Terminal terminal, BufferedImage image)
+            throws IOException {
+        TerminalGraphics.Protocol protocol;
+        try {
+            protocol = TerminalGraphics.Protocol.valueOf(protocolName.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            terminal.writer().println("Unknown protocol: " + protocolName);
+            terminal.writer().println("Available protocols: kitty, iterm2, sixel");
+            return;
+        }
+
+        TerminalGraphicsManager.forceProtocol(protocol);
+        try {
+            Optional<TerminalGraphics> graphics = TerminalGraphicsManager.getBestProtocol(terminal);
+            if (graphics.isPresent()) {
+                terminal.writer().println("Forced protocol: " + protocol.getName());
+                graphics.get().displayImage(terminal, image);
+            } else {
+                terminal.writer().println("Protocol " + protocol.getName() + " is not available or supported");
+            }
+        } finally {
+            // Reset to automatic detection
+            TerminalGraphicsManager.forceProtocol(null);
+        }
+    }
+
+    /**
+     * Lists terminals that support graphics protocols.
+     *
+     * @param terminal the terminal to write to
+     */
+    public static void listSupportedTerminals(Terminal terminal) {
+        terminal.writer().println("\nTerminals with graphics support:");
+        terminal.writer().println("Kitty Graphics Protocol:");
+        terminal.writer().println("  - Kitty terminal");
+        terminal.writer().println("  - WezTerm");
+        terminal.writer().println("  - Ghostty (planned)");
+        terminal.writer().println();
+        terminal.writer().println("iTerm2 Inline Images:");
+        terminal.writer().println("  - iTerm2");
+        terminal.writer().println();
+        terminal.writer().println("Sixel Graphics:");
+        terminal.writer().println("  - XTerm (with --enable-sixel-graphics)");
+        terminal.writer().println("  - iTerm2 (>= 3.3.0)");
+        terminal.writer().println("  - foot");
+        terminal.writer().println("  - WezTerm");
+        terminal.writer().println("  - Konsole (>= 22.04)");
+        terminal.writer().println("  - VS Code (with terminal.integrated.enableImages: true)");
+        terminal.writer().println("  - MLTerm");
+        terminal.writer().println("  - Mintty (>= 2.6.0)");
+    }
+
+    /**
+     * Main method to demonstrate terminal graphics and double-size characters.
      */
     public static void main(String[] args) {
         try (Terminal terminal = TerminalBuilder.builder().build()) {
@@ -198,9 +352,9 @@ public class TerminalGraphicsExample {
                     demonstrateSixelOverride(terminal, true);
                     return;
                 } else if (args[0].equals("--test-image")) {
-                    // Use the test image directly
-                    terminal.writer().println("Displaying test image");
-                    displayBufferedImageWithSixel(terminal, createTestImage());
+                    // Use the test image directly with best available protocol
+                    terminal.writer().println("Displaying test image with best available protocol");
+                    displayImageWithBestProtocol(terminal, createTestImage());
                     return;
                 } else if (args[0].equals("--double-size")) {
                     // Demonstrate double-size characters
@@ -211,43 +365,78 @@ public class TerminalGraphicsExample {
                     String bannerText = args.length > 1 ? args[1] : "JLine 3";
                     DoubleSizeCharacters.printBanner(terminal, bannerText, '=');
                     return;
+                } else if (args[0].equals("--list-protocols")) {
+                    // List all available protocols and their support status
+                    listProtocolSupport(terminal);
+                    return;
+                } else if (args[0].equals("--protocol")) {
+                    // Force use of a specific protocol
+                    if (args.length < 2) {
+                        terminal.writer().println("Usage: --protocol <protocol_name>");
+                        terminal.writer().println("Available protocols: kitty, iterm2, sixel");
+                        return;
+                    }
+                    terminal.writer().println("Testing " + args[1] + " protocol with test image");
+                    displayImageWithProtocol(args[1], terminal, createTestImage());
+                    return;
                 }
             }
 
-            if (SixelGraphics.isSixelSupported(terminal)) {
-                terminal.writer().println("Terminal supports Sixel graphics");
+            // Check if any graphics protocol is supported
+            if (TerminalGraphicsManager.isGraphicsSupported(terminal)) {
+                Optional<TerminalGraphics> bestProtocol = TerminalGraphicsManager.getBestProtocol(terminal);
+                terminal.writer()
+                        .println("Terminal supports graphics using: "
+                                + bestProtocol.get().getProtocol().getName());
 
                 // If an image path is provided as an argument, display it
                 if (args.length > 0 && !args[0].startsWith("--")) {
-                    displayImageWithSixel(terminal, args[0]);
+                    try {
+                        BufferedImage image = ImageIO.read(new File(args[0]));
+                        if (image != null) {
+                            displayImageWithBestProtocol(terminal, image);
+                        } else {
+                            terminal.writer().println("Unable to read image file: " + args[0]);
+                        }
+                    } catch (IOException e) {
+                        terminal.writer().println("Error reading image file: " + e.getMessage());
+                    }
                 } else {
                     // Otherwise, try to display a sample image from resources
                     try {
-                        displayResourceImageWithSixel(terminal, "/images/jline-logo.png");
+                        InputStream is = SixelExample.class.getResourceAsStream("/images/jline-logo.png");
+                        if (is != null) {
+                            BufferedImage image = ImageIO.read(is);
+                            if (image != null) {
+                                terminal.writer().println("Displaying JLine logo from resources");
+                                displayImageWithBestProtocol(terminal, image);
+                            } else {
+                                throw new IOException("Unable to read resource image");
+                            }
+                        } else {
+                            throw new IOException("Resource image not found");
+                        }
                     } catch (IOException e) {
                         // If resource image fails, use a programmatically generated test image
                         terminal.writer().println("Resource image not found, using test image instead");
-                        displayBufferedImageWithSixel(terminal, createTestImage());
+                        displayImageWithBestProtocol(terminal, createTestImage());
                     }
                 }
             } else {
-                terminal.writer().println("Terminal does not support Sixel graphics");
-                terminal.writer().println("Try running in a terminal that supports Sixel, such as:");
-                terminal.writer().println("- XTerm (with --enable-sixel-graphics)");
-                terminal.writer().println("- MLTerm");
-                terminal.writer().println("- Mintty (>= 2.6.0)");
-                terminal.writer().println("- iTerm2 (>= 3.3.0)");
-                terminal.writer().println("- Konsole (>= 22.04)");
-                terminal.writer().println("- foot");
-                terminal.writer().println("- WezTerm");
+                terminal.writer().println("Terminal does not support any graphics protocols");
+                listSupportedTerminals(terminal);
                 terminal.writer().println("\nCommand line options:");
-                terminal.writer().println("  --force-enable   Override detection and force enable sixel support");
-                terminal.writer().println("  --force-disable  Override detection and force disable sixel support");
-                terminal.writer().println("  --demo-override  Demonstrate the override feature");
-                terminal.writer().println("  --test-image     Display a programmatically generated test image");
-                terminal.writer().println("  --double-size    Demonstrate double-size character functionality");
-                terminal.writer().println("  --banner [text]  Create a banner with double-size characters");
-                terminal.writer().println("  <image-path>     Display the specified image file");
+                terminal.writer().println("  --force-enable     Override detection and force enable sixel support");
+                terminal.writer().println("  --force-disable    Override detection and force disable sixel support");
+                terminal.writer().println("  --demo-override    Demonstrate the override feature");
+                terminal.writer().println("  --test-image       Display a programmatically generated test image");
+                terminal.writer().println("  --double-size      Demonstrate double-size character functionality");
+                terminal.writer().println("  --banner [text]    Create a banner with double-size characters");
+                terminal.writer()
+                        .println("  --list-protocols   Show all available graphics protocols and their support");
+                terminal.writer()
+                        .println("  --protocol <name>  Force use of a specific protocol (kitty, iterm2, sixel)");
+                terminal.writer().println("  <image-path>       Display the specified image file");
             }
 
             terminal.flush();

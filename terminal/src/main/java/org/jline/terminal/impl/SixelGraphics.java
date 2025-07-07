@@ -176,6 +176,7 @@ public class SixelGraphics {
 
         String sixelData = convertToSixel(image);
         terminal.writer().print(sixelData);
+        terminal.writer().println();
         terminal.writer().flush();
     }
 
