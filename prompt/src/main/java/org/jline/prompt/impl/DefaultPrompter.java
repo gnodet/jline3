@@ -300,7 +300,7 @@ public class DefaultPrompter implements Prompter {
 
         // Initialize display
         resetDisplay();
-        firstItemRow = header.size() + 1; // Header + message line
+        firstItemRow = (header != null ? header.size() : 0) + 1; // Header + message line
 
         // Calculate column layout
         calculateColumnLayout(items);
@@ -378,7 +378,7 @@ public class DefaultPrompter implements Prompter {
 
         // Initialize display
         resetDisplay();
-        firstItemRow = header.size() + 1; // Header + message line
+        firstItemRow = (header != null ? header.size() : 0) + 1; // Header + message line
 
         // Calculate column layout
         calculateColumnLayout(items);
@@ -602,7 +602,7 @@ public class DefaultPrompter implements Prompter {
      */
     private List<AttributedString> buildListDisplayLines(
             List<AttributedString> header, String message, List<ListItem> items, int cursorRow) {
-        List<AttributedString> out = new ArrayList<>(header);
+        List<AttributedString> out = new ArrayList<>(header != null ? header : new ArrayList<>());
 
         // Add message line
         AttributedStringBuilder asb = new AttributedStringBuilder();
@@ -780,7 +780,7 @@ public class DefaultPrompter implements Prompter {
             List<CheckboxItem> items,
             int cursorRow,
             Set<String> selectedIds) {
-        List<AttributedString> out = new ArrayList<>(header);
+        List<AttributedString> out = new ArrayList<>(header != null ? header : new ArrayList<>());
 
         // Add message line
         AttributedStringBuilder asb = new AttributedStringBuilder();
