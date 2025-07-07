@@ -9,7 +9,9 @@
 package org.jline.prompt.impl;
 
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -47,6 +49,7 @@ public class DefaultPrompter implements Prompter {
     private final Display display;
     private final BindingReader bindingReader;
     private Attributes attributes;
+    private List<AttributedString> header = new ArrayList<>();
 
     // Default timeout for escape sequences
     public static final long DEFAULT_TIMEOUT_WITH_ESC = 150L;
@@ -153,35 +156,51 @@ public class DefaultPrompter implements Prompter {
             Function<Map<String, ? extends PromptResult<? extends Prompt>>, List<? extends Prompt>> promptsProvider)
             throws IOException {
 
-        Map<String, PromptResult<? extends Prompt>> allResults = new HashMap<>();
+        Map<String, PromptResult<? extends Prompt>> resultMap = new HashMap<>();
+        Deque<List<? extends Prompt>> prevLists = new ArrayDeque<>();
+        Deque<Map<String, PromptResult<? extends Prompt>>> prevResults = new ArrayDeque<>();
+        boolean cancellable = config.cancellableFirstPrompt();
 
         try {
-            // Iteratively prompt until no more prompts are provided
-            while (true) {
-                // Get the next set of prompts based on current results
-                List<? extends Prompt> prompts = promptsProvider.apply(allResults);
+            open();
+            // Get our first list of prompts
+            List<? extends Prompt> promptList = promptsProvider.apply(new HashMap<>());
+            Map<String, PromptResult<? extends Prompt>> promptResult = new HashMap<>();
 
-                // If no prompts returned, we're done
-                if (prompts == null || prompts.isEmpty()) {
-                    break;
+            while (promptList != null) {
+                // Second and later prompts should always be cancellable
+                // TODO: Implement cancellable logic when needed
+
+                // Prompt the user
+                promptInternal(header, promptList, promptResult);
+
+                if (promptResult.isEmpty()) {
+                    // The prompt was cancelled by the user, so let's go back to the
+                    // previous list of prompts and its results (if any)
+                    promptList = prevLists.pollFirst();
+                    promptResult = prevResults.pollFirst();
+                    if (promptResult != null) {
+                        // Remove the results of the previous prompt from the main result map
+                        promptResult.forEach((k, v) -> resultMap.remove(k));
+                        if (!this.header.isEmpty()) {
+                            this.header.remove(this.header.size() - 1);
+                        }
+                    }
+                } else {
+                    // We remember the list of prompts and their results
+                    prevLists.push(promptList);
+                    prevResults.push(promptResult);
+                    // Add the results to the main result map
+                    resultMap.putAll(promptResult);
+                    // And we get our next list of prompts (if any)
+                    promptList = promptsProvider.apply(resultMap);
+                    promptResult = new HashMap<>();
                 }
-
-                // Execute the current batch of prompts
-                Map<String, ? extends PromptResult<? extends Prompt>> batchResults = executePrompts(header, prompts);
-
-                // Add results to our accumulated results
-                for (Map.Entry<String, ? extends PromptResult<? extends Prompt>> entry : batchResults.entrySet()) {
-                    allResults.put(entry.getKey(), entry.getValue());
-                }
-
-                // Clear header after first iteration to avoid repeating it
-                header = null;
             }
 
-            return allResults;
-
-        } catch (UserInterruptException e) {
-            throw new IOException("User interrupted", e);
+            return removeNoResults(resultMap);
+        } finally {
+            close();
         }
     }
 
@@ -190,9 +209,143 @@ public class DefaultPrompter implements Prompter {
         return terminal;
     }
 
+    /**
+     * Internal prompt method that mirrors ConsolePrompt.prompt() logic.
+     * Handles header accumulation and backward navigation.
+     */
+    protected void promptInternal(
+            List<AttributedString> headerIn,
+            List<? extends Prompt> promptList,
+            Map<String, PromptResult<? extends Prompt>> resultMap)
+            throws IOException {
+
+        if (!terminalInRawMode()) {
+            throw new IllegalStateException("Terminal is not in raw mode! Maybe Prompter is closed?");
+        }
+
+        // Initialize header from input
+        if (headerIn != null && this.header.isEmpty()) {
+            this.header.addAll(headerIn);
+        }
+
+        boolean backward = false;
+        for (int i = resultMap.isEmpty() ? 0 : resultMap.size() - 1; i < promptList.size(); i++) {
+            Prompt prompt = promptList.get(i);
+            try {
+                if (backward) {
+                    removePreviousResult(prompt, resultMap);
+                    backward = false;
+                }
+
+                PromptResult<? extends Prompt> oldResult = resultMap.get(prompt.getName());
+                PromptResult<? extends Prompt> result = promptElement(this.header, prompt, oldResult);
+
+                if (result == null) {
+                    // Prompt was cancelled by the user
+                    if (i > 0) {
+                        // Go back to previous prompt
+                        i -= 2;
+                        backward = true;
+                        continue;
+                    } else {
+                        if (config.cancellableFirstPrompt()) {
+                            resultMap.clear();
+                            return;
+                        } else {
+                            // Repeat current prompt
+                            i -= 1;
+                            continue;
+                        }
+                    }
+                }
+
+                // Add result to header for next prompt (like ConsolePrompt)
+                if (!(prompt instanceof TextPrompt)) {
+                    String resp = result.getResult();
+                    if (result instanceof ConfirmResult) {
+                        ConfirmResult cr = (ConfirmResult) result;
+                        resp = cr.getConfirmed() == ConfirmResult.ConfirmationValue.YES ? "Yes" : "No";
+                    }
+                    AttributedStringBuilder message = createMessage(prompt.getMessage(), resp);
+                    this.header.add(message.toAttributedString());
+                } else {
+                    // For text prompts, add the text content to header
+                    TextPrompt textPrompt = (TextPrompt) prompt;
+                    this.header.add(new AttributedString(textPrompt.getText()));
+                }
+
+                resultMap.put(prompt.getName(), result);
+            } catch (UserInterruptException e) {
+                throw e;
+            } catch (Exception e) {
+                // Log error and continue
+                terminal.writer().println("Error executing prompt '" + prompt.getName() + "': " + e.getMessage());
+                terminal.flush();
+            }
+        }
+    }
+
     @Override
     public LineReader getLineReader() {
         return reader;
+    }
+
+    /**
+     * Remove results that have no meaningful value (like ConsolePrompt).
+     */
+    private Map<String, PromptResult<? extends Prompt>> removeNoResults(
+            Map<String, PromptResult<? extends Prompt>> resultMap) {
+        Map<String, PromptResult<? extends Prompt>> filtered = new HashMap<>();
+        for (Map.Entry<String, PromptResult<? extends Prompt>> entry : resultMap.entrySet()) {
+            if (entry.getValue() != null && entry.getValue().getResult() != null) {
+                filtered.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return filtered;
+    }
+
+    /**
+     * Remove previous result when going backward (like ConsolePrompt).
+     */
+    private void removePreviousResult(Prompt prompt, Map<String, PromptResult<? extends Prompt>> resultMap) {
+        resultMap.remove(prompt.getName());
+        // Also remove from header if it was added
+        if (!this.header.isEmpty()) {
+            this.header.remove(this.header.size() - 1);
+        }
+    }
+
+    /**
+     * Create a message with prompt and response (like ConsolePrompt).
+     */
+    private AttributedStringBuilder createMessage(String promptMessage, String response) {
+        AttributedStringBuilder asb = new AttributedStringBuilder();
+        asb.style(AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN));
+        asb.append("? ");
+        asb.style(AttributedStyle.DEFAULT.bold());
+        asb.append(promptMessage);
+        if (response != null) {
+            asb.style(AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN));
+            asb.append(" ");
+            asb.append(response);
+        }
+        return asb;
+    }
+
+    /**
+     * Execute a single prompt element (like ConsolePrompt.promptElement).
+     */
+    protected PromptResult<? extends Prompt> promptElement(
+            List<AttributedString> header, Prompt prompt, PromptResult<? extends Prompt> oldResult) {
+        try {
+            return executePrompt(header, prompt);
+        } catch (UserInterruptException e) {
+            return null; // Cancelled
+        } catch (Exception e) {
+            terminal.writer().println("Error: " + e.getMessage());
+            terminal.flush();
+            return null;
+        }
     }
 
     /**
@@ -566,14 +719,30 @@ public class DefaultPrompter implements Prompter {
     }
 
     private void open() throws IOException {
-        attributes = terminal.enterRawMode();
-        display.clear();
+        if (!terminalInRawMode()) {
+            attributes = terminal.enterRawMode();
+            terminal.puts(keypad_xmit);
+            terminal.writer().flush();
+        }
     }
 
     private void close() throws IOException {
-        if (attributes != null) {
+        if (terminalInRawMode()) {
+            // Update display with final header state
+            int cursor = (terminal.getWidth() + 1) * (header != null ? header.size() : 0);
+            if (header != null && !header.isEmpty()) {
+                display.update(header, cursor);
+            }
             terminal.setAttributes(attributes);
+            terminal.puts(keypad_local);
+            terminal.writer().println();
+            terminal.writer().flush();
+            attributes = null;
         }
+    }
+
+    private boolean terminalInRawMode() {
+        return attributes != null;
     }
 
     /**
