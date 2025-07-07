@@ -20,6 +20,7 @@ import java.io.InputStream;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import org.jline.terminal.impl.SixelGraphics;
+import org.jline.terminal.impl.DoubleSizeCharacters;
 
 /**
  * Example demonstrating how to use Sixel graphics in JLine.
@@ -146,7 +147,39 @@ public class SixelExample {
     }
 
     /**
-     * Main method to demonstrate Sixel graphics.
+     * Demonstrates double-size character functionality.
+     *
+     * @param terminal the terminal to use
+     */
+    public static void demonstrateDoubleSizeCharacters(Terminal terminal) {
+        try {
+            if (DoubleSizeCharacters.isDoubleSizeSupported(terminal)) {
+                terminal.writer().println("Terminal supports double-size characters");
+                terminal.writer().println();
+
+                // Demonstrate different modes
+                DoubleSizeCharacters.printNormal(terminal, "Normal text");
+                DoubleSizeCharacters.printDoubleWidth(terminal, "Double width text");
+                DoubleSizeCharacters.printDoubleHeight(terminal, "Double height text");
+
+                terminal.writer().println();
+
+                // Create a banner
+                DoubleSizeCharacters.printBanner(terminal, "JLine Sixel Demo", '*');
+
+                // Reset to normal
+                DoubleSizeCharacters.reset(terminal);
+                terminal.writer().println("Back to normal text");
+            } else {
+                terminal.writer().println("Terminal does not support double-size characters");
+            }
+        } catch (IOException e) {
+            terminal.writer().println("Error demonstrating double-size characters: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Main method to demonstrate Sixel graphics and double-size characters.
      */
     public static void main(String[] args) {
         try (Terminal terminal = TerminalBuilder.builder().build()) {
@@ -168,6 +201,15 @@ public class SixelExample {
                     // Use the test image directly
                     terminal.writer().println("Displaying test image");
                     displayBufferedImageWithSixel(terminal, createTestImage());
+                    return;
+                } else if (args[0].equals("--double-size")) {
+                    // Demonstrate double-size characters
+                    demonstrateDoubleSizeCharacters(terminal);
+                    return;
+                } else if (args[0].equals("--banner")) {
+                    // Create a banner with double-size characters
+                    String bannerText = args.length > 1 ? args[1] : "JLine 3";
+                    DoubleSizeCharacters.printBanner(terminal, bannerText, '=');
                     return;
                 }
             }
@@ -203,6 +245,8 @@ public class SixelExample {
                 terminal.writer().println("  --force-disable  Override detection and force disable sixel support");
                 terminal.writer().println("  --demo-override  Demonstrate the override feature");
                 terminal.writer().println("  --test-image     Display a programmatically generated test image");
+                terminal.writer().println("  --double-size    Demonstrate double-size character functionality");
+                terminal.writer().println("  --banner [text]  Create a banner with double-size characters");
                 terminal.writer().println("  <image-path>     Display the specified image file");
             }
         } catch (IOException e) {

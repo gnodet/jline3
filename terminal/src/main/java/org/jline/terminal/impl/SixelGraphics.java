@@ -77,6 +77,37 @@ public class SixelGraphics {
             return sixelSupportOverride;
         }
 
+        // Try runtime detection first (if terminal supports it)
+        Boolean runtimeDetection = detectSixelSupportRuntime(terminal);
+        if (runtimeDetection != null) {
+            return runtimeDetection;
+        }
+
+        // Fall back to static detection
+        return detectSixelSupportStatic(terminal);
+    }
+
+    /**
+     * Attempts to detect Sixel support at runtime by querying the terminal.
+     * This is more reliable than static detection but may not work with all terminals.
+     *
+     * @param terminal the terminal to query
+     * @return true if sixel is supported, false if not supported, null if detection failed
+     */
+    private static Boolean detectSixelSupportRuntime(Terminal terminal) {
+        // TODO: Implement runtime detection using terminal queries
+        // This would involve sending a Device Attributes query and parsing the response
+        // For now, return null to fall back to static detection
+        return null;
+    }
+
+    /**
+     * Detects Sixel support using static information (terminal type, environment variables).
+     *
+     * @param terminal the terminal to check
+     * @return true if the terminal likely supports Sixel graphics, false otherwise
+     */
+    private static boolean detectSixelSupportStatic(Terminal terminal) {
         // Check terminal type against known terminals that support sixel
         String terminalType = terminal.getType().toLowerCase();
 
@@ -123,6 +154,8 @@ public class SixelGraphics {
             // XTerm supports sixel since patch #359
             // Unfortunately, there's no reliable way to detect the patch level
             // from environment variables alone
+            // For now, assume modern xterm installations support sixel
+            return true;
         }
 
         // Check if terminal type is in our known list
@@ -307,11 +340,15 @@ public class SixelGraphics {
         int width = image.getWidth();
         int height = image.getHeight();
 
-        // First scan to find used colors
+        // Create a color index map for the image
+        int[][] colorMap = new int[height][width];
+
+        // First scan to find used colors and build color map
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 int pixel = image.getRGB(x, y) & 0xFFFFFF;
                 int colorIndex = findClosestColorIndex(cm, pixel);
+                colorMap[y][x] = colorIndex;
                 if (colorIndex < colorCount) {
                     colorUsed[colorIndex] = true;
                 }
@@ -326,48 +363,60 @@ public class SixelGraphics {
                 int b = cm.getBlue(i);
 
                 // Sixel color definition: "#" + color_index + ";" + color_spec + ";" + r + ";" + g + ";" + b
-                String colorDef = String.format("#%d;2;%d;%d;%d", i, r, g, b);
+                // RGB values need to be scaled to 0-100 range
+                String colorDef = String.format("#%d;2;%d;%d;%d", i,
+                    (r * 100) / 255, (g * 100) / 255, (b * 100) / 255);
                 baos.write(colorDef.getBytes(StandardCharsets.US_ASCII));
             }
         }
 
         // Process image data in 6-pixel-high strips
+        // We'll use a simpler approach: for each strip, output all colors
         for (int y = 0; y < height; y += 6) {
-            // For each column in this strip
-            for (int x = 0; x < width; x++) {
-                int currentColor = -1;
-                int sixelData = 0;
+            // For each used color in this strip
+            for (int colorIndex = 0; colorIndex < colorCount; colorIndex++) {
+                if (!colorUsed[colorIndex]) {
+                    continue;
+                }
 
-                // Collect 6 vertical pixels
-                for (int subY = 0; subY < 6; subY++) {
-                    if (y + subY < height) {
-                        int pixel = image.getRGB(x, y + subY) & 0xFFFFFF;
-                        int colorIndex = findClosestColorIndex(cm, pixel);
-
-                        if (currentColor != colorIndex) {
-                            // If we've collected data for the previous color, output it
-                            if (currentColor != -1 && sixelData > 0) {
-                                baos.write(String.format("#%d%c", currentColor, sixelData + 63)
-                                        .getBytes(StandardCharsets.US_ASCII));
-                            }
-
-                            currentColor = colorIndex;
-                            sixelData = 0;
+                // Check if this color appears in this strip
+                boolean colorInStrip = false;
+                for (int checkY = y; checkY < Math.min(y + 6, height) && !colorInStrip; checkY++) {
+                    for (int checkX = 0; checkX < width && !colorInStrip; checkX++) {
+                        if (colorMap[checkY][checkX] == colorIndex) {
+                            colorInStrip = true;
                         }
-
-                        // Set the bit for this pixel
-                        sixelData |= (1 << subY);
                     }
                 }
 
-                // Output the last collected data
-                if (currentColor != -1 && sixelData > 0) {
-                    baos.write(
-                            String.format("#%d%c", currentColor, sixelData + 63).getBytes(StandardCharsets.US_ASCII));
+                if (!colorInStrip) {
+                    continue;
                 }
+
+                // Select this color
+                baos.write(String.format("#%d", colorIndex).getBytes(StandardCharsets.US_ASCII));
+
+                // For each column in this strip
+                for (int x = 0; x < width; x++) {
+                    int sixelData = 0;
+
+                    // Collect 6 vertical pixels for this color
+                    for (int subY = 0; subY < 6; subY++) {
+                        if (y + subY < height && colorMap[y + subY][x] == colorIndex) {
+                            // Set the bit for this pixel (bit 0 is top pixel)
+                            sixelData |= (1 << subY);
+                        }
+                    }
+
+                    // Output sixel character
+                    baos.write((char) (sixelData + 63));
+                }
+
+                // Graphics carriage return to return to start of line
+                baos.write('$');
             }
 
-            // End of line
+            // Graphics new line to move to next strip
             baos.write('-');
         }
 
