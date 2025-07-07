@@ -103,7 +103,7 @@ public class DefaultPrompter implements Prompter {
             reader = LineReaderBuilder.builder().terminal(terminal).build();
         }
         this.reader = reader;
-        this.display = new Display(terminal, true);
+        this.display = new Display(terminal, false); // Don't use full screen mode like console-ui
         this.bindingReader = new BindingReader(terminal.reader());
     }
 
@@ -115,7 +115,8 @@ public class DefaultPrompter implements Prompter {
         BACKWARD_ONE_COLUMN,
         INSERT,
         EXIT,
-        CANCEL
+        CANCEL,
+        IGNORE // For unmatched keys (like console-ui behavior)
     }
 
     private enum CheckboxOperation {
@@ -125,7 +126,8 @@ public class DefaultPrompter implements Prompter {
         BACKWARD_ONE_COLUMN,
         TOGGLE,
         EXIT,
-        CANCEL
+        CANCEL,
+        IGNORE // For unmatched keys (like console-ui behavior)
     }
 
     private enum ChoiceOperation {
@@ -311,7 +313,7 @@ public class DefaultPrompter implements Prompter {
 
         // Set up key bindings
         KeyMap<ListOperation> keyMap = new KeyMap<>();
-        bindListKeys(keyMap);
+        bindListKeys(keyMap, columns > 1); // Only bind column navigation for multi-column layouts
 
         // Interactive selection loop
         while (true) {
@@ -356,6 +358,9 @@ public class DefaultPrompter implements Prompter {
                     return new DefaultListResult(selectedItem.getName(), prompt);
                 case CANCEL:
                     throw new UserInterruptException("User cancelled");
+                case IGNORE:
+                    // Ignore unmatched keys (like console-ui behavior)
+                    break;
             }
         }
     }
@@ -389,7 +394,7 @@ public class DefaultPrompter implements Prompter {
 
         // Set up key bindings
         KeyMap<CheckboxOperation> keyMap = new KeyMap<>();
-        bindCheckboxKeys(keyMap);
+        bindCheckboxKeys(keyMap, columns > 1); // Only bind column navigation for multi-column layouts
 
         // Interactive selection loop
         while (true) {
@@ -426,6 +431,9 @@ public class DefaultPrompter implements Prompter {
                     return new DefaultCheckboxResult(selectedIds, prompt);
                 case CANCEL:
                     throw new UserInterruptException("User cancelled");
+                case IGNORE:
+                    // Ignore unmatched keys (like console-ui behavior)
+                    break;
             }
         }
     }
@@ -571,7 +579,7 @@ public class DefaultPrompter implements Prompter {
     /**
      * Bind keys for list prompt operations.
      */
-    private void bindListKeys(KeyMap<ListOperation> map) {
+    private void bindListKeys(KeyMap<ListOperation> map, boolean multiColumn) {
         // Bind printable characters to INSERT operation
         for (char i = 32; i < KEYMAP_LENGTH; i++) {
             map.bind(ListOperation.INSERT, Character.toString(i));
@@ -579,11 +587,19 @@ public class DefaultPrompter implements Prompter {
         // Bind navigation keys
         map.bind(ListOperation.FORWARD_ONE_LINE, "e", ctrl('E'), key(terminal, key_down));
         map.bind(ListOperation.BACKWARD_ONE_LINE, "y", ctrl('Y'), key(terminal, key_up));
-        map.bind(ListOperation.FORWARD_ONE_COLUMN, key(terminal, key_right));
-        map.bind(ListOperation.BACKWARD_ONE_COLUMN, key(terminal, key_left));
+
+        // Only bind column navigation for multi-column layouts (like console-ui behavior)
+        if (multiColumn) {
+            map.bind(ListOperation.FORWARD_ONE_COLUMN, key(terminal, key_right));
+            map.bind(ListOperation.BACKWARD_ONE_COLUMN, key(terminal, key_left));
+        }
+
         // Bind action keys
         map.bind(ListOperation.EXIT, "\r");
         map.bind(ListOperation.CANCEL, esc());
+
+        // Set up fallback for unmatched keys (like console-ui behavior)
+        map.setNomatch(ListOperation.IGNORE);
         map.setAmbiguousTimeout(DEFAULT_TIMEOUT_WITH_ESC);
     }
 
@@ -743,17 +759,25 @@ public class DefaultPrompter implements Prompter {
     /**
      * Bind keys for checkbox prompt operations.
      */
-    private void bindCheckboxKeys(KeyMap<CheckboxOperation> map) {
+    private void bindCheckboxKeys(KeyMap<CheckboxOperation> map, boolean multiColumn) {
         // Bind navigation keys
         map.bind(CheckboxOperation.FORWARD_ONE_LINE, "e", ctrl('E'), key(terminal, key_down));
         map.bind(CheckboxOperation.BACKWARD_ONE_LINE, "y", ctrl('Y'), key(terminal, key_up));
-        map.bind(CheckboxOperation.FORWARD_ONE_COLUMN, key(terminal, key_right));
-        map.bind(CheckboxOperation.BACKWARD_ONE_COLUMN, key(terminal, key_left));
+
+        // Only bind column navigation for multi-column layouts (like console-ui behavior)
+        if (multiColumn) {
+            map.bind(CheckboxOperation.FORWARD_ONE_COLUMN, key(terminal, key_right));
+            map.bind(CheckboxOperation.BACKWARD_ONE_COLUMN, key(terminal, key_left));
+        }
+
         // Bind toggle key
         map.bind(CheckboxOperation.TOGGLE, " ");
         // Bind action keys
         map.bind(CheckboxOperation.EXIT, "\r");
         map.bind(CheckboxOperation.CANCEL, esc());
+
+        // Set up fallback for unmatched keys (like console-ui behavior)
+        map.setNomatch(CheckboxOperation.IGNORE);
         map.setAmbiguousTimeout(DEFAULT_TIMEOUT_WITH_ESC);
     }
 
