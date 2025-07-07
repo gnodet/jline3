@@ -88,16 +88,16 @@ Run the demo with various options:
 
 ```bash
 # Display test image
-java -cp demo.jar org.jline.demo.examples.SixelExample --test-image
+java -cp demo.jar org.jline.demo.examples.TerminalGraphicsExample --test-image
 
 # Force enable Sixel support
-java -cp demo.jar org.jline.demo.examples.SixelExample --force-enable
+java -cp demo.jar org.jline.demo.examples.TerminalGraphicsExample --force-enable
 
 # Display specific image file
-java -cp demo.jar org.jline.demo.examples.SixelExample /path/to/image.png
+java -cp demo.jar org.jline.demo.examples.TerminalGraphicsExample /path/to/image.png
 
 # Demonstrate override functionality
-java -cp demo.jar org.jline.demo.examples.SixelExample --demo-override
+java -cp demo.jar org.jline.demo.examples.TerminalGraphicsExample --demo-override
 ```
 
 ## Double-Size Characters
@@ -148,10 +148,10 @@ DoubleSizeCharacters.setMode(terminal, DoubleSizeCharacters.Mode.DOUBLE_HEIGHT_B
 
 ```bash
 # Demonstrate double-size characters
-java -cp demo.jar org.jline.demo.examples.SixelExample --double-size
+java -cp demo.jar org.jline.demo.examples.TerminalGraphicsExample --double-size
 
 # Create a custom banner
-java -cp demo.jar org.jline.demo.examples.SixelExample --banner "My App"
+java -cp demo.jar org.jline.demo.examples.TerminalGraphicsExample --banner "My App"
 ```
 
 ## Implementation Details

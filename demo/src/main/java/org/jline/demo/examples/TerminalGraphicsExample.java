@@ -23,11 +23,11 @@ import org.jline.terminal.impl.SixelGraphics;
 import org.jline.terminal.impl.DoubleSizeCharacters;
 
 /**
- * Example demonstrating how to use Sixel graphics in JLine.
+ * Example demonstrating terminal graphics features including Sixel graphics and double-size characters.
  */
-public class SixelExample {
+public class TerminalGraphicsExample {
 
-    // SNIPPET_START: SixelExample
+    // SNIPPET_START: TerminalGraphicsExample
     /**
      * Force enable or disable Sixel support, overriding automatic detection.
      * This is useful for testing or when automatic detection fails.
@@ -63,7 +63,7 @@ public class SixelExample {
         }
 
         // Load and display the image from resources
-        try (InputStream is = SixelExample.class.getResourceAsStream(resourcePath)) {
+        try (InputStream is = TerminalGraphicsExample.class.getResourceAsStream(resourcePath)) {
             if (is != null) {
                 SixelGraphics.displayImage(terminal, is);
             } else {
@@ -112,7 +112,7 @@ public class SixelExample {
         // Draw text
         g2d.setColor(Color.WHITE);
         g2d.setFont(new Font("SansSerif", Font.BOLD, 24));
-        g2d.drawString("JLine Sixel Test", 50, 50);
+        g2d.drawString("JLine Graphics Test", 50, 50);
         g2d.setFont(new Font("SansSerif", Font.PLAIN, 16));
         g2d.drawString("Terminal Graphics Support", 70, 80);
 
@@ -123,7 +123,7 @@ public class SixelExample {
         g2d.dispose();
         return image;
     }
-    // SNIPPET_END: SixelExample
+    // SNIPPET_END: TerminalGraphicsExample
 
     /**
      * Demonstrates how to force enable or disable Sixel support.
@@ -165,7 +165,7 @@ public class SixelExample {
                 terminal.writer().println();
 
                 // Create a banner
-                DoubleSizeCharacters.printBanner(terminal, "JLine Sixel Demo", '*');
+                DoubleSizeCharacters.printBanner(terminal, "JLine Graphics Demo", '*');
 
                 // Reset to normal
                 DoubleSizeCharacters.reset(terminal);
