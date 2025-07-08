@@ -152,7 +152,7 @@ public class TerminalGraphicsExample {
             g2d.drawLine(0, y, width, y);
         }
 
-        // Draw text with proper centering
+        // Draw text with proper horizontal and vertical centering
         g2d.setColor(Color.WHITE);
 
         // Main title
@@ -161,8 +161,6 @@ public class TerminalGraphicsExample {
         String titleText = "JLine Graphics Test";
         FontMetrics titleMetrics = g2d.getFontMetrics(titleFont);
         int titleX = (width - titleMetrics.stringWidth(titleText)) / 2;
-        int titleY = 50;
-        g2d.drawString(titleText, titleX, titleY);
 
         // Subtitle
         Font subtitleFont = new Font("SansSerif", Font.PLAIN, 16);
@@ -170,7 +168,19 @@ public class TerminalGraphicsExample {
         String subtitleText = "Terminal Graphics Support";
         FontMetrics subtitleMetrics = g2d.getFontMetrics(subtitleFont);
         int subtitleX = (width - subtitleMetrics.stringWidth(subtitleText)) / 2;
-        int subtitleY = 80;
+
+        // Calculate vertical centering for both texts together
+        int totalTextHeight = titleMetrics.getHeight() + subtitleMetrics.getHeight() + 10; // 10px gap between texts
+        int startY = (height - totalTextHeight) / 2;
+
+        // Position title and subtitle with proper vertical centering
+        int titleY = startY + titleMetrics.getAscent();
+        int subtitleY = titleY + titleMetrics.getDescent() + 10 + subtitleMetrics.getAscent();
+
+        // Draw the text
+        g2d.setFont(titleFont);
+        g2d.drawString(titleText, titleX, titleY);
+        g2d.setFont(subtitleFont);
         g2d.drawString(subtitleText, subtitleX, subtitleY);
 
         // Draw a border
