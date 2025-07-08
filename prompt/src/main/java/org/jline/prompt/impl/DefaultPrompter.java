@@ -385,8 +385,7 @@ public class DefaultPrompter implements Prompter {
     protected PromptResult<? extends Prompt> promptElement(
             List<AttributedString> header, Prompt prompt, PromptResult<? extends Prompt> oldResult) {
         try {
-            // Display header before executing prompt (like ConsolePrompt)
-            displayHeader(header);
+            // Header is managed by individual prompt methods (like ConsolePrompt)
             return executePrompt(header, prompt);
         } catch (UserInterruptException e) {
             return null; // Cancelled
@@ -438,7 +437,8 @@ public class DefaultPrompter implements Prompter {
             asb.append("(").append(defaultValue).append(") ");
         }
 
-        // Display prompt message (header is managed at higher level)
+        // Display header and prompt message (like ConsolePrompt)
+        displayHeader(header);
         terminal.writer().print(asb.toAnsi(terminal));
         terminal.flush();
 
@@ -482,9 +482,12 @@ public class DefaultPrompter implements Prompter {
             return new DefaultListResult("", prompt);
         }
 
+        // Display header separately (like other prompts)
+        displayHeader(header);
+
         // Initialize display
         resetDisplay();
-        firstItemRow = (header != null ? header.size() : 0) + 1; // Header + message line
+        firstItemRow = 1; // Just message line (header displayed separately)
 
         // Calculate column layout
         calculateColumnLayout(items);
@@ -498,8 +501,8 @@ public class DefaultPrompter implements Prompter {
 
         // Interactive selection loop
         while (true) {
-            // Update display with current selection
-            refreshListDisplay(header, prompt.getMessage(), items, selectRow);
+            // Update display with current selection (header displayed separately)
+            refreshListDisplay(null, prompt.getMessage(), items, selectRow);
 
             // Read user input using BindingReader
             ListOperation op = bindingReader.readBinding(keyMap);
@@ -563,9 +566,12 @@ public class DefaultPrompter implements Prompter {
             return new DefaultCheckboxResult(selectedIds, prompt);
         }
 
+        // Display header separately (like other prompts)
+        displayHeader(header);
+
         // Initialize display
         resetDisplay();
-        firstItemRow = (header != null ? header.size() : 0) + 1; // Header + message line
+        firstItemRow = 1; // Just message line (header displayed separately)
 
         // Calculate column layout
         calculateColumnLayout(items);
@@ -579,8 +585,8 @@ public class DefaultPrompter implements Prompter {
 
         // Interactive selection loop
         while (true) {
-            // Update display with current selection and checkbox states
-            refreshCheckboxDisplay(header, prompt.getMessage(), items, selectRow, selectedIds);
+            // Update display with current selection and checkbox states (header displayed separately)
+            refreshCheckboxDisplay(null, prompt.getMessage(), items, selectRow, selectedIds);
 
             // Read user input using BindingReader
             CheckboxOperation op = bindingReader.readBinding(keyMap);
@@ -622,7 +628,8 @@ public class DefaultPrompter implements Prompter {
     private ChoiceResult executeChoicePrompt(List<AttributedString> header, ChoicePrompt prompt)
             throws IOException, UserInterruptException {
 
-        // Header is managed at higher level
+        // Display header and prompt message (like ConsolePrompt)
+        displayHeader(header);
         displayPromptMessage(prompt.getMessage());
 
         List<ChoiceItem> items = prompt.getItems();
@@ -694,7 +701,8 @@ public class DefaultPrompter implements Prompter {
     private ConfirmResult executeConfirmPrompt(List<AttributedString> header, ConfirmPrompt prompt)
             throws IOException, UserInterruptException {
 
-        // Header is managed at higher level
+        // Display header and prompt message (like ConsolePrompt)
+        displayHeader(header);
         displayPromptMessage(prompt.getMessage() + " (y/N)");
 
         String input = reader.readLine("").trim().toLowerCase();
@@ -709,7 +717,8 @@ public class DefaultPrompter implements Prompter {
     private PromptResult<TextPrompt> executeTextPrompt(List<AttributedString> header, TextPrompt prompt)
             throws IOException, UserInterruptException {
 
-        // Header is managed at higher level
+        // Display header and text (like ConsolePrompt)
+        displayHeader(header);
         displayText(prompt.getText());
 
         // Text prompts don't require user input, just display
