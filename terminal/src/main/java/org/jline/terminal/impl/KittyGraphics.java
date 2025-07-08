@@ -53,6 +53,53 @@ public class KittyGraphics implements TerminalGraphics {
 
     @Override
     public boolean isSupported(Terminal terminal) {
+        // First try runtime detection - most accurate method
+        Boolean runtimeResult = detectKittyRuntimeSupport(terminal);
+        if (runtimeResult != null) {
+            return runtimeResult;
+        }
+
+        // Fall back to static detection if runtime detection fails
+        return detectKittyStaticSupport(terminal);
+    }
+
+    /**
+     * Detects Kitty graphics support at runtime by querying the terminal.
+     * Uses the official Kitty graphics protocol query mechanism.
+     *
+     * @param terminal the terminal to query
+     * @return Boolean.TRUE if supported, Boolean.FALSE if not supported, null if detection failed
+     */
+    private static Boolean detectKittyRuntimeSupport(Terminal terminal) {
+        try {
+            // Send Kitty graphics protocol query (a=q action)
+            // Use minimal query with quiet mode to avoid cluttering output
+            terminal.writer().print("\033_Ga=q,s=1,v=1,i=1,I=1,q=1\033\\");
+            terminal.writer().flush();
+
+            // Read response with timeout
+            String response = readKittyResponse(terminal, 1000);
+            if (response != null) {
+                // Look for successful Kitty graphics response
+                // Format: ESC_Gi=1,I=1;OKESC\ or similar
+                return response.contains("_G") && response.contains(";OK");
+            }
+
+            return null; // Detection failed/timed out
+
+        } catch (Exception e) {
+            // If runtime detection fails, return null to fall back to static detection
+            return null;
+        }
+    }
+
+    /**
+     * Detects Kitty graphics support using static information.
+     *
+     * @param terminal the terminal to check
+     * @return true if the terminal likely supports Kitty graphics, false otherwise
+     */
+    private static boolean detectKittyStaticSupport(Terminal terminal) {
         // Check for Kitty terminal
         String termProgram = System.getenv("TERM_PROGRAM");
         if ("kitty".equals(termProgram)) {
@@ -106,9 +153,6 @@ public class KittyGraphics implements TerminalGraphics {
         if (System.getenv("GHOSTTY_RESOURCES_DIR") != null) {
             return true;
         }
-
-        // TODO: Add runtime detection by sending a query and checking response
-        // This would require terminal capability querying support
 
         return false;
     }
@@ -378,5 +422,49 @@ public class KittyGraphics implements TerminalGraphics {
         String clearSequence = KITTY_GRAPHICS_START + "a=d,q=2" + KITTY_GRAPHICS_END;
         terminal.writer().print(clearSequence);
         terminal.writer().flush();
+    }
+
+    /**
+     * Reads a Kitty graphics protocol response from the terminal with a timeout.
+     * Used for runtime detection of Kitty graphics support.
+     *
+     * @param terminal the terminal to read from
+     * @param timeoutMs timeout in milliseconds
+     * @return the response string, or null if timeout/error
+     */
+    private static String readKittyResponse(Terminal terminal, long timeoutMs) {
+        try {
+            org.jline.utils.NonBlockingReader reader = terminal.reader();
+            StringBuilder response = new StringBuilder();
+
+            long startTime = System.currentTimeMillis();
+            int c;
+
+            // Read characters until we get a complete response or timeout
+            while ((c = reader.read(timeoutMs)) != -1) {
+                response.append((char) c);
+
+                // Check if we have a complete Kitty graphics response
+                // Format: ESC_G...ESC\
+                String responseStr = response.toString();
+                if (responseStr.contains("\033_G") && responseStr.contains("\033\\")) {
+                    return responseStr;
+                }
+
+                // Safety check: don't read forever
+                if (response.length() > 200 || (System.currentTimeMillis() - startTime) > timeoutMs) {
+                    break;
+                }
+
+                // Use shorter timeout for subsequent characters
+                timeoutMs = 50;
+            }
+
+            // Return what we got, even if incomplete
+            return response.length() > 0 ? response.toString() : null;
+
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

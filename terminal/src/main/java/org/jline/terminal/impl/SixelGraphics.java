@@ -107,10 +107,26 @@ public class SixelGraphics implements TerminalGraphics {
      * @return true if sixel is supported, false if not supported, null if detection failed
      */
     private static Boolean detectSixelSupportRuntime(Terminal terminal) {
-        // TODO: Implement runtime detection using terminal queries
-        // This would involve sending a Device Attributes query and parsing the response
-        // For now, return null to fall back to static detection
-        return null;
+        try {
+            // Send Device Attributes query (same method as lsix command)
+            terminal.writer().print("\033[c");
+            terminal.writer().flush();
+
+            // Read response with timeout
+            String response = readTerminalResponse(terminal, 1000);
+            if (response != null) {
+                // Look for code "4" which indicates Sixel graphics support
+                // Response format: ESC[?1;2;4;6;9;15;18;21;22c
+                // Code "4" = Sixel graphics support
+                return response.contains(";4;") || response.contains(";4c") || response.endsWith("4c");
+            }
+
+            return null; // Detection failed/timed out
+
+        } catch (Exception e) {
+            // If runtime detection fails, return null to fall back to static detection
+            return null;
+        }
     }
 
     /**
@@ -615,5 +631,49 @@ public class SixelGraphics implements TerminalGraphics {
      */
     public String getDescription() {
         return "Sixel graphics protocol - widely supported bitmap format";
+    }
+
+    /**
+     * Reads a response from the terminal with a timeout.
+     * Used for runtime detection of terminal capabilities.
+     *
+     * @param terminal the terminal to read from
+     * @param timeoutMs timeout in milliseconds
+     * @return the response string, or null if timeout/error
+     */
+    private static String readTerminalResponse(Terminal terminal, long timeoutMs) {
+        try {
+            org.jline.utils.NonBlockingReader reader = terminal.reader();
+            StringBuilder response = new StringBuilder();
+
+            long startTime = System.currentTimeMillis();
+            int c;
+
+            // Read characters until we get a complete response or timeout
+            while ((c = reader.read(timeoutMs)) != -1) {
+                response.append((char) c);
+
+                // Check if we have a complete Device Attributes response
+                // Format: ESC[?...c or ESC[...c
+                String responseStr = response.toString();
+                if (responseStr.contains("\033[") && responseStr.endsWith("c")) {
+                    return responseStr;
+                }
+
+                // Safety check: don't read forever
+                if (response.length() > 200 || (System.currentTimeMillis() - startTime) > timeoutMs) {
+                    break;
+                }
+
+                // Use shorter timeout for subsequent characters
+                timeoutMs = 50;
+            }
+
+            // Return what we got, even if incomplete
+            return response.length() > 0 ? response.toString() : null;
+
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
