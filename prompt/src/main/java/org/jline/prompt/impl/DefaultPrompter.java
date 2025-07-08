@@ -1011,7 +1011,7 @@ public class DefaultPrompter implements Prompter {
         if (columns == 1) {
             // Single column layout - use original logic with pagination
             computeListRange(cursorRow, items.size());
-            for (int i = range.first; i < range.last - 1; i++) {
+            for (int i = range.first; i < range.last; i++) {
                 if (items.isEmpty() || i > items.size() - 1) {
                     break;
                 }
@@ -1199,7 +1199,7 @@ public class DefaultPrompter implements Prompter {
         if (columns == 1) {
             // Single column layout - use original logic with pagination
             computeListRange(cursorRow, items.size());
-            for (int i = range.first; i < range.last - 1; i++) {
+            for (int i = range.first; i < range.last; i++) {
                 if (items.isEmpty() || i > items.size() - 1) {
                     break;
                 }
@@ -1398,7 +1398,7 @@ public class DefaultPrompter implements Prompter {
         if (range != null && range.first <= cursorRow - firstItemRow && range.last - 1 > cursorRow - firstItemRow) {
             return;
         }
-        range = new ListRange(0, itemsSize + 1);
+        range = new ListRange(0, itemsSize);
         if (size.getRows() < firstItemRow + itemsSize) {
             int itemId = cursorRow - firstItemRow;
             int forList = size.getRows() - firstItemRow;
