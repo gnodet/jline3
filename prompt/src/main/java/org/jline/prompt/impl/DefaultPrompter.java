@@ -183,6 +183,7 @@ public class DefaultPrompter implements Prompter {
                         }
                     }
                 } catch (UserInterruptException e) {
+                    // Propagate Ctrl+C to exit the whole demo
                     throw e;
                 } catch (Exception e) {
                     // Log error and continue
@@ -383,12 +384,14 @@ public class DefaultPrompter implements Prompter {
      * Execute a single prompt element (like ConsolePrompt.promptElement).
      */
     protected PromptResult<? extends Prompt> promptElement(
-            List<AttributedString> header, Prompt prompt, PromptResult<? extends Prompt> oldResult) {
+            List<AttributedString> header, Prompt prompt, PromptResult<? extends Prompt> oldResult)
+            throws UserInterruptException {
         try {
             // Header is managed by individual prompt methods (like ConsolePrompt)
             return executePrompt(header, prompt);
         } catch (UserInterruptException e) {
-            return null; // Cancelled
+            // Propagate Ctrl+C to exit the whole demo
+            throw e;
         } catch (Exception e) {
             terminal.writer().println("Error: " + e.getMessage());
             terminal.flush();
@@ -444,7 +447,8 @@ public class DefaultPrompter implements Prompter {
         }
         displayLines.add(asb.toAttributedString());
 
-        // Display using Display system (no direct terminal access)
+        // Update size and display using Display system (no direct terminal access)
+        size.copy(terminal.getSize());
         display.resize(size.getRows(), size.getColumns());
         display.update(displayLines, -1);
 
@@ -636,6 +640,7 @@ public class DefaultPrompter implements Prompter {
         // TODO: Convert choice prompt to use Display system properly
         // For now, just display header using Display system
         if (header != null && !header.isEmpty()) {
+            size.copy(terminal.getSize());
             display.resize(size.getRows(), size.getColumns());
             display.update(header, -1);
         }
@@ -725,7 +730,8 @@ public class DefaultPrompter implements Prompter {
         asb.append(" (y/N) ");
         displayLines.add(asb.toAttributedString());
 
-        // Display using Display system
+        // Update size and display using Display system
+        size.copy(terminal.getSize());
         display.resize(size.getRows(), size.getColumns());
         display.update(displayLines, -1);
 
@@ -750,7 +756,8 @@ public class DefaultPrompter implements Prompter {
         // Add text content
         displayLines.add(new AttributedString(prompt.getText()));
 
-        // Display using Display system
+        // Update size and display using Display system
+        size.copy(terminal.getSize());
         display.resize(size.getRows(), size.getColumns());
         display.update(displayLines, -1);
 
@@ -847,6 +854,7 @@ public class DefaultPrompter implements Prompter {
      */
     private void refreshListDisplay(
             List<AttributedString> header, String message, List<ListItem> items, int cursorRow) {
+        size.copy(terminal.getSize());
         display.resize(size.getRows(), size.getColumns());
         display.update(
                 buildListDisplayLines(header, message, items, cursorRow),
@@ -1029,6 +1037,7 @@ public class DefaultPrompter implements Prompter {
             List<CheckboxItem> items,
             int cursorRow,
             Set<String> selectedIds) {
+        size.copy(terminal.getSize());
         display.resize(size.getRows(), size.getColumns());
         display.update(
                 buildCheckboxDisplayLines(header, message, items, cursorRow, selectedIds),
