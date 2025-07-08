@@ -447,58 +447,118 @@ public class DefaultPrompter implements Prompter {
         }
         displayLines.add(asb.toAttributedString());
 
-        // Update size and display using Display system
+        // Copy ConsolePrompt's exact behavior: use Display system with direct character input
         size.copy(terminal.getSize());
-        display.resize(size.getRows(), size.getColumns());
-        display.update(displayLines, -1);
 
-        // Clear the display after showing the prompt, then use LineReader
-        // This avoids conflicts between Display and LineReader
-        display.update(new ArrayList<>(), -1);
+        // Set up key bindings like ConsolePrompt
+        KeyMap<InputOperation> keyMap = new KeyMap<>();
+        bindInputKeys(keyMap);
 
-        // Now display just the header and use LineReader for the prompt
-        if (header != null && !header.isEmpty()) {
-            for (AttributedString line : header) {
-                terminal.writer().println(line.toAnsi(terminal));
+        StringBuilder buffer = new StringBuilder();
+        StringBuilder displayBuffer = new StringBuilder();
+        Character mask = prompt.getMask();
+        int startColumn = asb.columnLength();
+        int column = startColumn;
+
+        while (true) {
+            // Build display lines exactly like ConsolePrompt: header + message + buffer
+            List<AttributedString> out = new ArrayList<>();
+            if (header != null) {
+                out.addAll(header);
+            }
+
+            // Create message line with current input buffer
+            AttributedStringBuilder messageBuilder = new AttributedStringBuilder();
+            messageBuilder.append(asb);
+            if (mask != null) {
+                messageBuilder.append(displayBuffer.toString());
+            } else {
+                messageBuilder.append(buffer.toString());
+            }
+            out.add(messageBuilder.toAttributedString());
+
+            // Update display exactly like ConsolePrompt
+            display.resize(size.getRows(), size.getColumns());
+            int cursorRow = out.size() - 1;
+            display.update(out, size.cursorPos(cursorRow, column));
+
+            // Read input like ConsolePrompt
+            InputOperation op = bindingReader.readBinding(keyMap);
+            switch (op) {
+                case INSERT:
+                    String ch = bindingReader.getLastBinding();
+                    buffer.append(ch);
+                    if (mask != null) {
+                        displayBuffer.append(mask);
+                    } else {
+                        displayBuffer.append(ch);
+                    }
+                    column++;
+                    break;
+
+                case BACKSPACE:
+                    if (buffer.length() > 0) {
+                        buffer.deleteCharAt(buffer.length() - 1);
+                        if (displayBuffer.length() > 0) {
+                            displayBuffer.deleteCharAt(displayBuffer.length() - 1);
+                        }
+                        if (column > startColumn) {
+                            column--;
+                        }
+                    }
+                    break;
+
+                case EXIT:
+                    String input = buffer.toString();
+                    if (input.trim().isEmpty() && defaultValue != null) {
+                        input = defaultValue;
+                    }
+                    return new DefaultInputResult(input, input, prompt);
+
+                case CANCEL:
+                    throw new UserInterruptException("User cancelled");
             }
         }
+    }
 
-        // Use LineReader for input with the prompt message
-        String promptMessage = asb.toAnsi(terminal);
-        String input;
-        if (prompt.getMask() != null) {
-            input = reader.readLine(promptMessage, prompt.getMask());
-        } else {
-            input = reader.readLine(promptMessage);
+    /**
+     * Input operations for direct character input (copied from ConsolePrompt).
+     */
+    private enum InputOperation {
+        INSERT,
+        BACKSPACE,
+        DELETE,
+        RIGHT,
+        LEFT,
+        UP,
+        DOWN,
+        BEGINNING_OF_LINE,
+        END_OF_LINE,
+        EXIT,
+        CANCEL
+    }
+
+    /**
+     * Bind keys for input operations (copied from ConsolePrompt).
+     */
+    private void bindInputKeys(KeyMap<InputOperation> keyMap) {
+        // Bind printable characters to INSERT
+        keyMap.setUnicode(InputOperation.INSERT);
+        for (char i = 32; i < 127; i++) {
+            keyMap.bind(InputOperation.INSERT, Character.toString(i));
         }
 
-        // Use default value if input is empty (like ConsolePrompt)
-        if (input.trim().isEmpty() && defaultValue != null) {
-            input = defaultValue;
-        }
-
-        // Validate input if validator is provided
-        if (prompt.getValidator() != null) {
-            while (!prompt.getValidator().apply(input)) {
-                // Add error message to display
-                List<AttributedString> errorLines = new ArrayList<>(displayLines);
-                errorLines.add(new AttributedString(
-                        "Invalid input. Please try again.", AttributedStyle.DEFAULT.foreground(AttributedStyle.RED)));
-                display.update(errorLines, -1);
-
-                if (prompt.getMask() != null) {
-                    input = reader.readLine("", prompt.getMask());
-                } else {
-                    input = reader.readLine("");
-                }
-                // Apply default value again if needed
-                if (input.trim().isEmpty() && defaultValue != null) {
-                    input = defaultValue;
-                }
-            }
-        }
-
-        return new DefaultInputResult(input, input, prompt);
+        // Bind special keys like ConsolePrompt
+        keyMap.bind(InputOperation.BACKSPACE, "\b", "\u007f");
+        keyMap.bind(InputOperation.DELETE, "\u001b[3~");
+        keyMap.bind(InputOperation.EXIT, "\r", "\n");
+        keyMap.bind(InputOperation.CANCEL, "\u0003"); // Ctrl+C
+        keyMap.bind(InputOperation.LEFT, "\u001b[D");
+        keyMap.bind(InputOperation.RIGHT, "\u001b[C");
+        keyMap.bind(InputOperation.UP, "\u001b[A");
+        keyMap.bind(InputOperation.DOWN, "\u001b[B");
+        keyMap.bind(InputOperation.BEGINNING_OF_LINE, "\u0001"); // Ctrl+A
+        keyMap.bind(InputOperation.END_OF_LINE, "\u0005"); // Ctrl+E
     }
 
     private ListResult executeListPrompt(List<AttributedString> header, ListPrompt prompt)
