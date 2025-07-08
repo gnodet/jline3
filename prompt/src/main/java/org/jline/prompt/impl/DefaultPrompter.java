@@ -71,7 +71,8 @@ public class DefaultPrompter implements Prompter {
     private int lines = 1;
     private boolean rowsFirst = true; // true = row-first layout, false = column-first
     private static final int MARGIN_BETWEEN_COLUMNS = 2;
-    private static final int MIN_ITEMS_FOR_MULTICOLUMN = 4; // Minimum items to enable multi-column layout
+    private static final int MIN_ITEMS_FOR_MULTICOLUMN =
+            6; // Minimum items to enable multi-column layout (increased from 4)
 
     /**
      * Create a new DefaultPrompter with the given terminal.
