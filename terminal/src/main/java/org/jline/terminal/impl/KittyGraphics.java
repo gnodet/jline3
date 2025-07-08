@@ -98,9 +98,6 @@ public class KittyGraphics implements TerminalGraphics {
         String kittyData = convertImage(image, options);
         terminal.writer().print(kittyData);
         terminal.writer().flush();
-
-        // Consume the response to prevent it from appearing as text
-        consumeKittyResponse(terminal);
     }
 
     @Override
@@ -147,6 +144,7 @@ public class KittyGraphics implements TerminalGraphics {
         controlData.append("a=T"); // action: transmit and display
         controlData.append(",f=100"); // format: PNG
         controlData.append(",i=").append(imageId); // image ID
+        controlData.append(",q=2"); // quiet mode: suppress responses
 
         // Add dimensions if specified
         if (options.getWidth() != null) {
@@ -220,6 +218,7 @@ public class KittyGraphics implements TerminalGraphics {
                 controlData.append("a=T"); // action: transmit and display
                 controlData.append(",f=100"); // format: PNG
                 controlData.append(",i=").append(imageId); // image ID
+                controlData.append(",q=2"); // quiet mode: suppress responses
 
                 // Add dimensions if specified
                 if (options.getWidth() != null) {
@@ -264,34 +263,60 @@ public class KittyGraphics implements TerminalGraphics {
      */
     private void consumeKittyResponse(Terminal terminal) {
         try {
-            // Use a short timeout to read the response
-            // Kitty typically responds very quickly (within a few milliseconds)
+            // Use a longer timeout and more aggressive reading
+            // Some terminals might take longer to respond or buffer the response
             org.jline.utils.NonBlockingReader reader = terminal.reader();
 
-            // Read with a 100ms timeout to catch the response
+            // Try multiple times with different timeouts
             StringBuilder response = new StringBuilder();
-            long timeout = 100; // 100ms should be enough for local terminal response
 
-            int c;
-            while ((c = reader.read(timeout)) != -1) {
-                response.append((char) c);
+            // First, try a quick read (50ms) for immediate responses
+            int attempts = 0;
+            int maxAttempts = 5;
 
-                // Check if we've received a complete Kitty response
-                String responseStr = response.toString();
-                if (responseStr.contains("\033_G") && responseStr.contains("\033\\")) {
-                    // Found complete response, we're done
-                    break;
+            while (attempts < maxAttempts) {
+                long timeout = (attempts == 0) ? 50 : 200; // First attempt quick, then longer
+
+                int c;
+                boolean foundData = false;
+
+                // Read available data with timeout
+                while ((c = reader.read(timeout)) != -1) {
+                    foundData = true;
+                    response.append((char) c);
+
+                    // Check if we've received a complete Kitty response
+                    String responseStr = response.toString();
+
+                    // Look for the specific pattern: ESC _ G ... ESC \
+                    if (responseStr.contains("\033_G") && responseStr.contains("\033\\")) {
+                        // Found complete response, we're done
+                        return;
+                    }
+
+                    // Also check for the pattern you're seeing: ESC _ G i=1;OK ESC \
+                    if (responseStr.matches(".*\033_G.*i=\\d+;.*\033\\\\.*")) {
+                        // Found the specific response pattern
+                        return;
+                    }
+
+                    // If response is getting too long, something's wrong - break out
+                    if (response.length() > 200) {
+                        return;
+                    }
+
+                    // Use a very short timeout for subsequent characters in the same response
+                    timeout = 10;
                 }
 
-                // If response is getting too long, something's wrong - break out
-                if (response.length() > 100) {
+                // If we found some data, try one more time with a longer timeout
+                if (foundData) {
+                    attempts++;
+                } else {
+                    // No data found, exit
                     break;
                 }
             }
-
-            // Note: We intentionally consume and discard the response
-            // The response contains status information that the application
-            // typically doesn't need to display to the user
 
         } catch (IOException e) {
             // If we can't read the response, that's okay - it might not be available
@@ -307,10 +332,9 @@ public class KittyGraphics implements TerminalGraphics {
      * @throws IOException if an I/O error occurs
      */
     public void deleteImage(Terminal terminal, int imageId) throws IOException {
-        String deleteSequence = KITTY_GRAPHICS_START + "a=d,i=" + imageId + KITTY_GRAPHICS_END;
+        String deleteSequence = KITTY_GRAPHICS_START + "a=d,i=" + imageId + ",q=2" + KITTY_GRAPHICS_END;
         terminal.writer().print(deleteSequence);
         terminal.writer().flush();
-        consumeKittyResponse(terminal);
     }
 
     /**
@@ -320,9 +344,8 @@ public class KittyGraphics implements TerminalGraphics {
      * @throws IOException if an I/O error occurs
      */
     public void clearAllImages(Terminal terminal) throws IOException {
-        String clearSequence = KITTY_GRAPHICS_START + "a=d" + KITTY_GRAPHICS_END;
+        String clearSequence = KITTY_GRAPHICS_START + "a=d,q=2" + KITTY_GRAPHICS_END;
         terminal.writer().print(clearSequence);
         terminal.writer().flush();
-        consumeKittyResponse(terminal);
     }
 }
