@@ -447,9 +447,21 @@ public class DefaultPrompter implements Prompter {
         }
         displayLines.add(asb.toAttributedString());
 
-        // For input prompts, don't use Display system - use LineReader directly
-        // to avoid cursor positioning conflicts
-        displayHeader(displayLines.subList(0, displayLines.size() - 1));
+        // Update size and display using Display system
+        size.copy(terminal.getSize());
+        display.resize(size.getRows(), size.getColumns());
+        display.update(displayLines, -1);
+
+        // Clear the display after showing the prompt, then use LineReader
+        // This avoids conflicts between Display and LineReader
+        display.update(new ArrayList<>(), -1);
+
+        // Now display just the header and use LineReader for the prompt
+        if (header != null && !header.isEmpty()) {
+            for (AttributedString line : header) {
+                terminal.writer().println(line.toAnsi(terminal));
+            }
+        }
 
         // Use LineReader for input with the prompt message
         String promptMessage = asb.toAnsi(terminal);
@@ -487,19 +499,6 @@ public class DefaultPrompter implements Prompter {
         }
 
         return new DefaultInputResult(input, input, prompt);
-    }
-
-    /**
-     * Display header lines using direct terminal output.
-     * Used for input prompts to avoid Display/LineReader conflicts.
-     */
-    private void displayHeader(List<AttributedString> headerLines) {
-        if (headerLines != null && !headerLines.isEmpty()) {
-            for (AttributedString line : headerLines) {
-                terminal.writer().println(line.toAnsi(terminal));
-            }
-            terminal.flush();
-        }
     }
 
     private ListResult executeListPrompt(List<AttributedString> header, ListPrompt prompt)
