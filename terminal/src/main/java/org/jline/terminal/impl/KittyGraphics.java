@@ -98,6 +98,9 @@ public class KittyGraphics implements TerminalGraphics {
         String kittyData = convertImage(image, options);
         terminal.writer().print(kittyData);
         terminal.writer().flush();
+
+        // Consume the response to prevent it from appearing as text
+        consumeKittyResponse(terminal);
     }
 
     @Override
@@ -254,6 +257,49 @@ public class KittyGraphics implements TerminalGraphics {
     }
 
     /**
+     * Consumes the Kitty graphics protocol response to prevent it from appearing as text.
+     * Kitty sends responses like "\x1b_Gi=1;OK\x1b\" after processing graphics commands.
+     *
+     * @param terminal the terminal
+     */
+    private void consumeKittyResponse(Terminal terminal) {
+        try {
+            // Use a short timeout to read the response
+            // Kitty typically responds very quickly (within a few milliseconds)
+            org.jline.utils.NonBlockingReader reader = terminal.reader();
+
+            // Read with a 100ms timeout to catch the response
+            StringBuilder response = new StringBuilder();
+            long timeout = 100; // 100ms should be enough for local terminal response
+
+            int c;
+            while ((c = reader.read(timeout)) != -1) {
+                response.append((char) c);
+
+                // Check if we've received a complete Kitty response
+                String responseStr = response.toString();
+                if (responseStr.contains("\033_G") && responseStr.contains("\033\\")) {
+                    // Found complete response, we're done
+                    break;
+                }
+
+                // If response is getting too long, something's wrong - break out
+                if (response.length() > 100) {
+                    break;
+                }
+            }
+
+            // Note: We intentionally consume and discard the response
+            // The response contains status information that the application
+            // typically doesn't need to display to the user
+
+        } catch (IOException e) {
+            // If we can't read the response, that's okay - it might not be available
+            // or the terminal might not send responses. We'll just continue.
+        }
+    }
+
+    /**
      * Deletes an image from the terminal's memory.
      *
      * @param terminal the terminal
@@ -264,6 +310,7 @@ public class KittyGraphics implements TerminalGraphics {
         String deleteSequence = KITTY_GRAPHICS_START + "a=d,i=" + imageId + KITTY_GRAPHICS_END;
         terminal.writer().print(deleteSequence);
         terminal.writer().flush();
+        consumeKittyResponse(terminal);
     }
 
     /**
@@ -276,5 +323,6 @@ public class KittyGraphics implements TerminalGraphics {
         String clearSequence = KITTY_GRAPHICS_START + "a=d" + KITTY_GRAPHICS_END;
         terminal.writer().print(clearSequence);
         terminal.writer().flush();
+        consumeKittyResponse(terminal);
     }
 }
