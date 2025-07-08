@@ -107,6 +107,16 @@ public class SixelGraphics implements TerminalGraphics {
      * @return true if sixel is supported, false if not supported, null if detection failed
      */
     private static Boolean detectSixelSupportRuntime(Terminal terminal) {
+        // Skip runtime detection for terminals we know don't support Sixel
+        // This prevents hanging and response leakage
+        String termProgram = System.getenv("TERM_PROGRAM");
+        if ("com.mitchellh.ghostty".equals(termProgram)
+                || "ghostty".equals(termProgram)
+                || "kitty".equals(termProgram)
+                || "Apple_Terminal".equals(termProgram)) {
+            return false; // Definitely no Sixel support
+        }
+
         try {
             // Send Device Attributes query (same method as lsix command)
             terminal.writer().print("\033[c");
@@ -162,7 +172,8 @@ public class SixelGraphics implements TerminalGraphics {
 
         // Check for terminals that should use other protocols instead of Sixel
 
-        // Ghostty should use Kitty graphics protocol instead of Sixel
+        // Ghostty does NOT support Sixel (confirmed by maintainer)
+        // Uses Kitty graphics protocol instead
         if ("com.mitchellh.ghostty".equals(termProgram) || "ghostty".equals(termProgram)) {
             return false;
         }

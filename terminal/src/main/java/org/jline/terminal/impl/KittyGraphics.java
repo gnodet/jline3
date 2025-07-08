@@ -74,18 +74,21 @@ public class KittyGraphics implements TerminalGraphics {
         try {
             // Send Kitty graphics protocol query (a=q action)
             // Use minimal query with quiet mode to avoid cluttering output
-            terminal.writer().print("\033_Ga=q,s=1,v=1,i=1,I=1,q=1\033\\");
+            terminal.writer().print("\033_Ga=q,s=1,v=1,i=1,I=1,q=2\033\\");
             terminal.writer().flush();
 
-            // Read response with timeout
-            String response = readKittyResponse(terminal, 1000);
+            // Read response with timeout (shorter for Kitty since it should respond quickly)
+            String response = readKittyResponse(terminal, 500);
             if (response != null) {
                 // Look for successful Kitty graphics response
                 // Format: ESC_Gi=1,I=1;OKESC\ or similar
-                return response.contains("_G") && response.contains(";OK");
+                // With q=2, we should get no response if supported, error if not
+                return response.contains("_G") && (response.contains(";OK") || response.contains("ENOTSUPPORTED"));
             }
 
-            return null; // Detection failed/timed out
+            // No response with q=2 might indicate support (quiet mode working)
+            // But we can't be sure, so fall back to static detection
+            return null;
 
         } catch (Exception e) {
             // If runtime detection fails, return null to fall back to static detection
