@@ -423,6 +423,12 @@ public class DefaultPrompter implements Prompter {
     private InputResult executeInputPrompt(List<AttributedString> header, InputPrompt prompt)
             throws IOException, UserInterruptException {
 
+        // Build display lines including header + prompt message
+        List<AttributedString> displayLines = new ArrayList<>();
+        if (header != null) {
+            displayLines.addAll(header);
+        }
+
         // Create prompt message like ConsolePrompt: "? " + message + " " + "(defaultValue) "
         AttributedStringBuilder asb = new AttributedStringBuilder();
         asb.style(AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN));
@@ -436,11 +442,11 @@ public class DefaultPrompter implements Prompter {
             asb.style(AttributedStyle.DEFAULT);
             asb.append("(").append(defaultValue).append(") ");
         }
+        displayLines.add(asb.toAttributedString());
 
-        // Display header and prompt message (like ConsolePrompt)
-        displayHeader(header);
-        terminal.writer().print(asb.toAnsi(terminal));
-        terminal.flush();
+        // Display using Display system (no direct terminal access)
+        display.resize(size.getRows(), size.getColumns());
+        display.update(displayLines, -1);
 
         // Read input from user (don't pre-fill with default value)
         String input;
@@ -458,7 +464,12 @@ public class DefaultPrompter implements Prompter {
         // Validate input if validator is provided
         if (prompt.getValidator() != null) {
             while (!prompt.getValidator().apply(input)) {
-                displayError("Invalid input. Please try again.");
+                // Add error message to display
+                List<AttributedString> errorLines = new ArrayList<>(displayLines);
+                errorLines.add(new AttributedString(
+                        "Invalid input. Please try again.", AttributedStyle.DEFAULT.foreground(AttributedStyle.RED)));
+                display.update(errorLines, -1);
+
                 if (prompt.getMask() != null) {
                     input = reader.readLine("", prompt.getMask());
                 } else {
@@ -482,12 +493,9 @@ public class DefaultPrompter implements Prompter {
             return new DefaultListResult("", prompt);
         }
 
-        // Display header separately (like other prompts)
-        displayHeader(header);
-
         // Initialize display
         resetDisplay();
-        firstItemRow = 1; // Just message line (header displayed separately)
+        firstItemRow = (header != null ? header.size() : 0) + 1; // Header + message line
 
         // Calculate column layout
         calculateColumnLayout(items);
@@ -501,8 +509,8 @@ public class DefaultPrompter implements Prompter {
 
         // Interactive selection loop
         while (true) {
-            // Update display with current selection (header displayed separately)
-            refreshListDisplay(null, prompt.getMessage(), items, selectRow);
+            // Update display with current selection
+            refreshListDisplay(header, prompt.getMessage(), items, selectRow);
 
             // Read user input using BindingReader
             ListOperation op = bindingReader.readBinding(keyMap);
@@ -566,12 +574,9 @@ public class DefaultPrompter implements Prompter {
             return new DefaultCheckboxResult(selectedIds, prompt);
         }
 
-        // Display header separately (like other prompts)
-        displayHeader(header);
-
         // Initialize display
         resetDisplay();
-        firstItemRow = 1; // Just message line (header displayed separately)
+        firstItemRow = (header != null ? header.size() : 0) + 1; // Header + message line
 
         // Calculate column layout
         calculateColumnLayout(items);
@@ -585,8 +590,8 @@ public class DefaultPrompter implements Prompter {
 
         // Interactive selection loop
         while (true) {
-            // Update display with current selection and checkbox states (header displayed separately)
-            refreshCheckboxDisplay(null, prompt.getMessage(), items, selectRow, selectedIds);
+            // Update display with current selection and checkbox states
+            refreshCheckboxDisplay(header, prompt.getMessage(), items, selectRow, selectedIds);
 
             // Read user input using BindingReader
             CheckboxOperation op = bindingReader.readBinding(keyMap);
@@ -628,8 +633,12 @@ public class DefaultPrompter implements Prompter {
     private ChoiceResult executeChoicePrompt(List<AttributedString> header, ChoicePrompt prompt)
             throws IOException, UserInterruptException {
 
-        // Display header and prompt message (like ConsolePrompt)
-        displayHeader(header);
+        // TODO: Convert choice prompt to use Display system properly
+        // For now, just display header using Display system
+        if (header != null && !header.isEmpty()) {
+            display.resize(size.getRows(), size.getColumns());
+            display.update(header, -1);
+        }
         displayPromptMessage(prompt.getMessage());
 
         List<ChoiceItem> items = prompt.getItems();
@@ -701,9 +710,24 @@ public class DefaultPrompter implements Prompter {
     private ConfirmResult executeConfirmPrompt(List<AttributedString> header, ConfirmPrompt prompt)
             throws IOException, UserInterruptException {
 
-        // Display header and prompt message (like ConsolePrompt)
-        displayHeader(header);
-        displayPromptMessage(prompt.getMessage() + " (y/N)");
+        // Build display lines including header + prompt message
+        List<AttributedString> displayLines = new ArrayList<>();
+        if (header != null) {
+            displayLines.addAll(header);
+        }
+
+        // Add prompt message with (y/N)
+        AttributedStringBuilder asb = new AttributedStringBuilder();
+        asb.style(AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN));
+        asb.append("? ");
+        asb.style(AttributedStyle.DEFAULT.bold());
+        asb.append(prompt.getMessage());
+        asb.append(" (y/N) ");
+        displayLines.add(asb.toAttributedString());
+
+        // Display using Display system
+        display.resize(size.getRows(), size.getColumns());
+        display.update(displayLines, -1);
 
         String input = reader.readLine("").trim().toLowerCase();
         boolean confirmed = "y".equals(input) || "yes".equals(input);
@@ -717,9 +741,18 @@ public class DefaultPrompter implements Prompter {
     private PromptResult<TextPrompt> executeTextPrompt(List<AttributedString> header, TextPrompt prompt)
             throws IOException, UserInterruptException {
 
-        // Display header and text (like ConsolePrompt)
-        displayHeader(header);
-        displayText(prompt.getText());
+        // Build display lines including header + text
+        List<AttributedString> displayLines = new ArrayList<>();
+        if (header != null) {
+            displayLines.addAll(header);
+        }
+
+        // Add text content
+        displayLines.add(new AttributedString(prompt.getText()));
+
+        // Display using Display system
+        display.resize(size.getRows(), size.getColumns());
+        display.update(displayLines, -1);
 
         // Text prompts don't require user input, just display
         return new AbstractPromptResult<TextPrompt>(prompt) {
