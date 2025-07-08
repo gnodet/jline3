@@ -144,6 +144,23 @@ public class SixelGraphics implements TerminalGraphics {
         String termProgram = System.getenv("TERM_PROGRAM");
         String termProgramVersion = System.getenv("TERM_PROGRAM_VERSION");
 
+        // Check for terminals that should use other protocols instead of Sixel
+
+        // Ghostty should use Kitty graphics protocol instead of Sixel
+        if ("com.mitchellh.ghostty".equals(termProgram) || "ghostty".equals(termProgram)) {
+            return false;
+        }
+
+        // Kitty does not support Sixel (by design), uses its own graphics protocol
+        if ("kitty".equals(termProgram)) {
+            return false;
+        }
+
+        // macOS Terminal.app does NOT support Sixel (confirmed by arewesixelyet.com)
+        if ("Apple_Terminal".equals(termProgram)) {
+            return false;
+        }
+
         // Check for specific terminal programs that support sixel
         if ("iTerm.app".equals(termProgram) && termProgramVersion != null) {
             // iTerm2 supports sixel since version 3.3.0

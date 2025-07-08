@@ -64,6 +64,32 @@ public class KittyGraphics implements TerminalGraphics {
             return true;
         }
 
+        // Check for Ghostty (supports Kitty graphics protocol)
+        if ("com.mitchellh.ghostty".equals(termProgram) || "ghostty".equals(termProgram)) {
+            return true;
+        }
+
+        // Check for iTerm2 (supports Kitty graphics protocol since version 3.5.0)
+        if ("iTerm.app".equals(termProgram)) {
+            String termProgramVersion = System.getenv("TERM_PROGRAM_VERSION");
+            if (termProgramVersion != null) {
+                try {
+                    String[] versionParts = termProgramVersion.split("\\.");
+                    if (versionParts.length >= 2) {
+                        int major = Integer.parseInt(versionParts[0]);
+                        int minor = Integer.parseInt(versionParts[1]);
+                        // iTerm2 supports Kitty graphics protocol since 3.5.0
+                        if (major > 3 || (major == 3 && minor >= 5)) {
+                            return true;
+                        }
+                    }
+                } catch (NumberFormatException e) {
+                    // If version parsing fails, assume it's supported for recent iTerm2
+                    return true;
+                }
+            }
+        }
+
         // Check TERM environment variable
         String term = System.getenv("TERM");
         if (term != null && term.contains("kitty")) {
@@ -73,6 +99,11 @@ public class KittyGraphics implements TerminalGraphics {
         // Check for Kitty-specific capabilities
         // Kitty sets KITTY_WINDOW_ID when running
         if (System.getenv("KITTY_WINDOW_ID") != null) {
+            return true;
+        }
+
+        // Check for Ghostty-specific environment variables
+        if (System.getenv("GHOSTTY_RESOURCES_DIR") != null) {
             return true;
         }
 
