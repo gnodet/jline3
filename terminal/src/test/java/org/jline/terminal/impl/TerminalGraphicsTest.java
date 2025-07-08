@@ -96,7 +96,7 @@ public class TerminalGraphicsTest {
         ITerm2Graphics iterm2 = new ITerm2Graphics();
         SixelGraphics sixel = new SixelGraphics();
 
-        ImageOptions options = new ImageOptions();
+        TerminalGraphics.ImageOptions options = new TerminalGraphics.ImageOptions();
 
         // Test basic conversion
         String kittyResult = kitty.convertImage(testImage, options);
@@ -123,13 +123,14 @@ public class TerminalGraphicsTest {
         SixelGraphics sixel = new SixelGraphics();
 
         // Test with width and height options
-        ImageOptions options = new ImageOptions().width(50).height(50).preserveAspectRatio(false);
+        TerminalGraphics.ImageOptions options =
+                new TerminalGraphics.ImageOptions().width(50).height(50).preserveAspectRatio(false);
 
         String result = sixel.convertImage(testImage, options);
         assertNotNull(result);
 
         // Test with name option
-        options = new ImageOptions().name("test-image");
+        options = new TerminalGraphics.ImageOptions().name("test-image");
         result = sixel.convertImage(testImage, options);
         assertNotNull(result);
     }
@@ -151,14 +152,14 @@ public class TerminalGraphicsTest {
 
     @Test
     void testProtocolNames() {
-        assertEquals("Kitty Graphics Protocol", TerminalGraphics.Protocol.KITTY.getName());
-        assertEquals("iTerm2 Inline Images", TerminalGraphics.Protocol.ITERM2.getName());
-        assertEquals("Sixel Graphics", TerminalGraphics.Protocol.SIXEL.getName());
+        assertEquals("kitty", TerminalGraphics.Protocol.KITTY.getName());
+        assertEquals("iterm2", TerminalGraphics.Protocol.ITERM2.getName());
+        assertEquals("sixel", TerminalGraphics.Protocol.SIXEL.getName());
     }
 
     @Test
     void testImageOptionsBuilder() {
-        ImageOptions options = new ImageOptions()
+        TerminalGraphics.ImageOptions options = new TerminalGraphics.ImageOptions()
                 .width(100)
                 .height(200)
                 .name("test")

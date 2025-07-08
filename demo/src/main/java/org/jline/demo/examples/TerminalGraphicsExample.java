@@ -91,7 +91,7 @@ public class TerminalGraphicsExample {
         // Load and display the image
         File imageFile = new File(imagePath);
         if (imageFile.exists()) {
-            SixelGraphics.displayImage(terminal, imageFile);
+            new SixelGraphics().displayImage(terminal, imageFile);
         } else {
             terminal.writer().println("Image file not found: " + imagePath);
         }
@@ -107,7 +107,7 @@ public class TerminalGraphicsExample {
         // Load and display the image from resources
         try (InputStream is = TerminalGraphicsExample.class.getResourceAsStream(resourcePath)) {
             if (is != null) {
-                SixelGraphics.displayImage(terminal, is);
+                new SixelGraphics().displayImage(terminal, is);
             } else {
                 terminal.writer().println("Resource not found: " + resourcePath);
             }
@@ -122,7 +122,7 @@ public class TerminalGraphicsExample {
         }
 
         // Display the BufferedImage
-        SixelGraphics.displayImage(terminal, image);
+        new SixelGraphics().displayImage(terminal, image);
     }
 
     /**
@@ -404,7 +404,7 @@ public class TerminalGraphicsExample {
                 } else {
                     // Otherwise, try to display a sample image from resources
                     try {
-                        InputStream is = SixelExample.class.getResourceAsStream("/images/jline-logo.png");
+                        InputStream is = TerminalGraphicsExample.class.getResourceAsStream("/images/jline-logo.png");
                         if (is != null) {
                             BufferedImage image = ImageIO.read(is);
                             if (image != null) {

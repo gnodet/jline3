@@ -125,7 +125,7 @@ public class SixelGraphicsTest {
 
         // Should throw exception for unsupported terminal
         assertThrows(UnsupportedOperationException.class, () -> {
-            SixelGraphics.displayImage(terminal, image);
+            new SixelGraphics().displayImage(terminal, image);
         });
     }
 
@@ -143,7 +143,7 @@ public class SixelGraphicsTest {
 
         // Should not throw exception
         assertDoesNotThrow(() -> {
-            SixelGraphics.displayImage(terminal, image);
+            new SixelGraphics().displayImage(terminal, image);
         });
     }
 

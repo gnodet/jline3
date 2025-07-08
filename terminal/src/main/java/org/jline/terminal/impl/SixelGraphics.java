@@ -181,7 +181,7 @@ public class SixelGraphics implements TerminalGraphics {
      * @param image the image to display
      * @throws IOException if an I/O error occurs
      */
-    public static void displayImage(Terminal terminal, BufferedImage image) throws IOException {
+    public static void displayImageStatic(Terminal terminal, BufferedImage image) throws IOException {
         if (!isSixelSupported(terminal)) {
             throw new UnsupportedOperationException("Terminal does not support Sixel graphics");
         }
@@ -199,9 +199,9 @@ public class SixelGraphics implements TerminalGraphics {
      * @param file the image file to display
      * @throws IOException if an I/O error occurs
      */
-    public static void displayImage(Terminal terminal, File file) throws IOException {
+    public static void displayImageStatic(Terminal terminal, File file) throws IOException {
         BufferedImage image = ImageIO.read(file);
-        displayImage(terminal, image);
+        displayImageStatic(terminal, image);
     }
 
     /**
@@ -211,9 +211,9 @@ public class SixelGraphics implements TerminalGraphics {
      * @param inputStream the input stream containing the image data
      * @throws IOException if an I/O error occurs
      */
-    public static void displayImage(Terminal terminal, InputStream inputStream) throws IOException {
+    public static void displayImageStatic(Terminal terminal, InputStream inputStream) throws IOException {
         BufferedImage image = ImageIO.read(inputStream);
-        displayImage(terminal, image);
+        displayImageStatic(terminal, image);
     }
 
     /**
@@ -489,28 +489,38 @@ public class SixelGraphics implements TerminalGraphics {
 
     @Override
     public void displayImage(Terminal terminal, BufferedImage image) throws IOException {
-        SixelGraphics.displayImage(terminal, image);
+        displayImageStatic(terminal, image);
     }
 
     @Override
     public void displayImage(Terminal terminal, File file) throws IOException {
-        SixelGraphics.displayImage(terminal, file);
+        displayImageStatic(terminal, file);
     }
 
     @Override
     public void displayImage(Terminal terminal, InputStream inputStream) throws IOException {
-        SixelGraphics.displayImage(terminal, inputStream);
+        displayImageStatic(terminal, inputStream);
     }
 
-    @Override
+    /**
+     * Displays an image with size constraints.
+     * This is a convenience method not part of the TerminalGraphics interface.
+     *
+     * @param terminal the terminal to display the image on
+     * @param image the image to display
+     * @param maxWidth maximum width for the image
+     * @param maxHeight maximum height for the image
+     * @throws IOException if an I/O error occurs
+     */
     public void displayImage(Terminal terminal, BufferedImage image, int maxWidth, int maxHeight) throws IOException {
         // Resize image if needed
         BufferedImage resizedImage = resizeImageIfNeeded(image, maxWidth, maxHeight);
-        SixelGraphics.displayImage(terminal, resizedImage);
+        displayImageStatic(terminal, resizedImage);
     }
 
     @Override
-    public void displayImage(Terminal terminal, BufferedImage image, TerminalGraphics.ImageOptions options) throws IOException {
+    public void displayImage(Terminal terminal, BufferedImage image, TerminalGraphics.ImageOptions options)
+            throws IOException {
         BufferedImage processedImage = image;
 
         // Apply size options if specified
@@ -531,7 +541,7 @@ public class SixelGraphics implements TerminalGraphics {
             processedImage = resizeImageIfNeeded(image, targetWidth, targetHeight);
         }
 
-        SixelGraphics.displayImage(terminal, processedImage);
+        displayImageStatic(terminal, processedImage);
     }
 
     @Override
@@ -541,7 +551,8 @@ public class SixelGraphics implements TerminalGraphics {
     }
 
     @Override
-    public void displayImage(Terminal terminal, InputStream inputStream, TerminalGraphics.ImageOptions options) throws IOException {
+    public void displayImage(Terminal terminal, InputStream inputStream, TerminalGraphics.ImageOptions options)
+            throws IOException {
         BufferedImage image = ImageIO.read(inputStream);
         displayImage(terminal, image, options);
     }
@@ -571,12 +582,20 @@ public class SixelGraphics implements TerminalGraphics {
         return convertToSixel(processedImage);
     }
 
-    @Override
+    /**
+     * Gets a human-readable name for this graphics protocol.
+     *
+     * @return the protocol name
+     */
     public String getName() {
         return getProtocol().getName();
     }
 
-    @Override
+    /**
+     * Gets a description of this graphics protocol.
+     *
+     * @return a description of the protocol
+     */
     public String getDescription() {
         return "Sixel graphics protocol - widely supported bitmap format";
     }
