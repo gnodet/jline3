@@ -10,6 +10,7 @@ package org.jline.demo.examples;
 
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
@@ -132,7 +133,7 @@ public class TerminalGraphicsExample {
      * @return a BufferedImage containing a test pattern
      */
     public static BufferedImage createTestImage() {
-        int width = 300;
+        int width = 400; // Made wider
         int height = 150;
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = image.createGraphics();
@@ -151,12 +152,26 @@ public class TerminalGraphicsExample {
             g2d.drawLine(0, y, width, y);
         }
 
-        // Draw text
+        // Draw text with proper centering
         g2d.setColor(Color.WHITE);
-        g2d.setFont(new Font("SansSerif", Font.BOLD, 24));
-        g2d.drawString("JLine Graphics Test", 50, 50);
-        g2d.setFont(new Font("SansSerif", Font.PLAIN, 16));
-        g2d.drawString("Terminal Graphics Support", 70, 80);
+
+        // Main title
+        Font titleFont = new Font("SansSerif", Font.BOLD, 24);
+        g2d.setFont(titleFont);
+        String titleText = "JLine Graphics Test";
+        FontMetrics titleMetrics = g2d.getFontMetrics(titleFont);
+        int titleX = (width - titleMetrics.stringWidth(titleText)) / 2;
+        int titleY = 50;
+        g2d.drawString(titleText, titleX, titleY);
+
+        // Subtitle
+        Font subtitleFont = new Font("SansSerif", Font.PLAIN, 16);
+        g2d.setFont(subtitleFont);
+        String subtitleText = "Terminal Graphics Support";
+        FontMetrics subtitleMetrics = g2d.getFontMetrics(subtitleFont);
+        int subtitleX = (width - subtitleMetrics.stringWidth(subtitleText)) / 2;
+        int subtitleY = 80;
+        g2d.drawString(subtitleText, subtitleX, subtitleY);
 
         // Draw a border
         g2d.setColor(Color.WHITE);
