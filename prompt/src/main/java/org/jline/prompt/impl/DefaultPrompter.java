@@ -385,6 +385,8 @@ public class DefaultPrompter implements Prompter {
     protected PromptResult<? extends Prompt> promptElement(
             List<AttributedString> header, Prompt prompt, PromptResult<? extends Prompt> oldResult) {
         try {
+            // Display header before executing prompt (like ConsolePrompt)
+            displayHeader(header);
             return executePrompt(header, prompt);
         } catch (UserInterruptException e) {
             return null; // Cancelled
@@ -422,21 +424,35 @@ public class DefaultPrompter implements Prompter {
     private InputResult executeInputPrompt(List<AttributedString> header, InputPrompt prompt)
             throws IOException, UserInterruptException {
 
-        // Display header and prompt message
-        displayHeader(header);
-        displayPromptMessage(prompt.getMessage());
+        // Create prompt message like ConsolePrompt: "? " + message + " " + "(defaultValue) "
+        AttributedStringBuilder asb = new AttributedStringBuilder();
+        asb.style(AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN));
+        asb.append("? ");
+        asb.style(AttributedStyle.DEFAULT.bold());
+        asb.append(prompt.getMessage());
+        asb.append(" ");
 
-        // Read input from user
+        String defaultValue = prompt.getDefaultValue();
+        if (defaultValue != null) {
+            asb.style(AttributedStyle.DEFAULT);
+            asb.append("(").append(defaultValue).append(") ");
+        }
+
+        // Display prompt message (header is managed at higher level)
+        terminal.writer().print(asb.toAnsi(terminal));
+        terminal.flush();
+
+        // Read input from user (don't pre-fill with default value)
         String input;
         if (prompt.getMask() != null) {
             input = reader.readLine("", prompt.getMask());
         } else {
-            String defaultValue = prompt.getDefaultValue();
-            if (defaultValue != null) {
-                input = reader.readLine("", null, defaultValue);
-            } else {
-                input = reader.readLine("");
-            }
+            input = reader.readLine("");
+        }
+
+        // Use default value if input is empty (like ConsolePrompt)
+        if (input.trim().isEmpty() && defaultValue != null) {
+            input = defaultValue;
         }
 
         // Validate input if validator is provided
@@ -447,6 +463,10 @@ public class DefaultPrompter implements Prompter {
                     input = reader.readLine("", prompt.getMask());
                 } else {
                     input = reader.readLine("");
+                }
+                // Apply default value again if needed
+                if (input.trim().isEmpty() && defaultValue != null) {
+                    input = defaultValue;
                 }
             }
         }
@@ -602,7 +622,7 @@ public class DefaultPrompter implements Prompter {
     private ChoiceResult executeChoicePrompt(List<AttributedString> header, ChoicePrompt prompt)
             throws IOException, UserInterruptException {
 
-        displayHeader(header);
+        // Header is managed at higher level
         displayPromptMessage(prompt.getMessage());
 
         List<ChoiceItem> items = prompt.getItems();
@@ -674,7 +694,7 @@ public class DefaultPrompter implements Prompter {
     private ConfirmResult executeConfirmPrompt(List<AttributedString> header, ConfirmPrompt prompt)
             throws IOException, UserInterruptException {
 
-        displayHeader(header);
+        // Header is managed at higher level
         displayPromptMessage(prompt.getMessage() + " (y/N)");
 
         String input = reader.readLine("").trim().toLowerCase();
@@ -689,7 +709,7 @@ public class DefaultPrompter implements Prompter {
     private PromptResult<TextPrompt> executeTextPrompt(List<AttributedString> header, TextPrompt prompt)
             throws IOException, UserInterruptException {
 
-        displayHeader(header);
+        // Header is managed at higher level
         displayText(prompt.getText());
 
         // Text prompts don't require user input, just display
