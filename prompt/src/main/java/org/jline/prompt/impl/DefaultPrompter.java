@@ -447,17 +447,17 @@ public class DefaultPrompter implements Prompter {
         }
         displayLines.add(asb.toAttributedString());
 
-        // Update size and display using Display system (no direct terminal access)
-        size.copy(terminal.getSize());
-        display.resize(size.getRows(), size.getColumns());
-        display.update(displayLines, -1);
+        // For input prompts, don't use Display system - use LineReader directly
+        // to avoid cursor positioning conflicts
+        displayHeader(displayLines.subList(0, displayLines.size() - 1));
 
-        // Read input from user (don't pre-fill with default value)
+        // Use LineReader for input with the prompt message
+        String promptMessage = asb.toAnsi(terminal);
         String input;
         if (prompt.getMask() != null) {
-            input = reader.readLine("", prompt.getMask());
+            input = reader.readLine(promptMessage, prompt.getMask());
         } else {
-            input = reader.readLine("");
+            input = reader.readLine(promptMessage);
         }
 
         // Use default value if input is empty (like ConsolePrompt)
@@ -487,6 +487,19 @@ public class DefaultPrompter implements Prompter {
         }
 
         return new DefaultInputResult(input, input, prompt);
+    }
+
+    /**
+     * Display header lines using direct terminal output.
+     * Used for input prompts to avoid Display/LineReader conflicts.
+     */
+    private void displayHeader(List<AttributedString> headerLines) {
+        if (headerLines != null && !headerLines.isEmpty()) {
+            for (AttributedString line : headerLines) {
+                terminal.writer().println(line.toAnsi(terminal));
+            }
+            terminal.flush();
+        }
     }
 
     private ListResult executeListPrompt(List<AttributedString> header, ListPrompt prompt)
@@ -768,16 +781,6 @@ public class DefaultPrompter implements Prompter {
                 return "TEXT_DISPLAYED";
             }
         };
-    }
-
-    private void displayHeader(List<AttributedString> header) {
-        if (header != null && !header.isEmpty()) {
-            for (AttributedString line : header) {
-                terminal.writer().println(line.toAnsi(terminal));
-            }
-            terminal.writer().println();
-            terminal.flush();
-        }
     }
 
     private void displayPromptMessage(String message) {
