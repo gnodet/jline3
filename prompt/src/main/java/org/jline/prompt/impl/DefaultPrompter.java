@@ -119,6 +119,7 @@ public class DefaultPrompter implements Prompter {
         INSERT,
         EXIT,
         CANCEL,
+        ESCAPE,
         IGNORE // For unmatched keys (like console-ui behavior)
     }
 
@@ -130,13 +131,15 @@ public class DefaultPrompter implements Prompter {
         TOGGLE,
         EXIT,
         CANCEL,
+        ESCAPE,
         IGNORE // For unmatched keys (like console-ui behavior)
     }
 
     private enum ChoiceOperation {
         INSERT,
         EXIT,
-        CANCEL
+        CANCEL,
+        ESCAPE
     }
 
     @Override
@@ -515,6 +518,9 @@ public class DefaultPrompter implements Prompter {
                     }
                     return new DefaultInputResult(input, input, prompt);
 
+                case ESCAPE:
+                    return null; // Go back to previous prompt
+
                 case CANCEL:
                     throw new UserInterruptException("User cancelled");
             }
@@ -534,8 +540,21 @@ public class DefaultPrompter implements Prompter {
         DOWN,
         BEGINNING_OF_LINE,
         END_OF_LINE,
+        SELECT_CANDIDATE,
         EXIT,
-        CANCEL
+        CANCEL,
+        ESCAPE
+    }
+
+    /**
+     * Confirm operations for direct character input (copied from ConsolePrompt).
+     */
+    private enum ConfirmOperation {
+        YES,
+        NO,
+        EXIT,
+        CANCEL,
+        ESCAPE
     }
 
     /**
@@ -553,12 +572,25 @@ public class DefaultPrompter implements Prompter {
         keyMap.bind(InputOperation.DELETE, "\u001b[3~");
         keyMap.bind(InputOperation.EXIT, "\r", "\n");
         keyMap.bind(InputOperation.CANCEL, "\u0003"); // Ctrl+C
+        keyMap.bind(InputOperation.ESCAPE, "\u001b"); // Escape key
         keyMap.bind(InputOperation.LEFT, "\u001b[D");
         keyMap.bind(InputOperation.RIGHT, "\u001b[C");
         keyMap.bind(InputOperation.UP, "\u001b[A");
         keyMap.bind(InputOperation.DOWN, "\u001b[B");
         keyMap.bind(InputOperation.BEGINNING_OF_LINE, "\u0001"); // Ctrl+A
         keyMap.bind(InputOperation.END_OF_LINE, "\u0005"); // Ctrl+E
+        keyMap.bind(InputOperation.SELECT_CANDIDATE, "\t"); // Tab for completion
+    }
+
+    /**
+     * Bind keys for confirm operations (copied from ConsolePrompt).
+     */
+    private void bindConfirmKeys(KeyMap<ConfirmOperation> keyMap) {
+        keyMap.bind(ConfirmOperation.YES, "y", "Y");
+        keyMap.bind(ConfirmOperation.NO, "n", "N");
+        keyMap.bind(ConfirmOperation.EXIT, "\r", "\n");
+        keyMap.bind(ConfirmOperation.CANCEL, "\u0003"); // Ctrl+C
+        keyMap.bind(ConfirmOperation.ESCAPE, "\u001b"); // Escape key
     }
 
     private ListResult executeListPrompt(List<AttributedString> header, ListPrompt prompt)
@@ -624,6 +656,8 @@ public class DefaultPrompter implements Prompter {
                 case EXIT:
                     ListItem selectedItem = items.get(selectRow - firstItemRow);
                     return new DefaultListResult(selectedItem.getName(), prompt);
+                case ESCAPE:
+                    return null; // Go back to previous prompt
                 case CANCEL:
                     throw new UserInterruptException("User cancelled");
                 case IGNORE:
@@ -697,6 +731,8 @@ public class DefaultPrompter implements Prompter {
                     break;
                 case EXIT:
                     return new DefaultCheckboxResult(selectedIds, prompt);
+                case ESCAPE:
+                    return null; // Go back to previous prompt
                 case CANCEL:
                     throw new UserInterruptException("User cancelled");
                 case IGNORE:
@@ -776,6 +812,8 @@ public class DefaultPrompter implements Prompter {
                     }
                     // No default, continue waiting for input
                     break;
+                case ESCAPE:
+                    return null; // Go back to previous prompt
                 case CANCEL:
                     terminal.writer().println();
                     terminal.flush();
@@ -787,33 +825,66 @@ public class DefaultPrompter implements Prompter {
     private ConfirmResult executeConfirmPrompt(List<AttributedString> header, ConfirmPrompt prompt)
             throws IOException, UserInterruptException {
 
-        // Build display lines including header + prompt message
-        List<AttributedString> displayLines = new ArrayList<>();
-        if (header != null) {
-            displayLines.addAll(header);
-        }
+        // Copy ConsolePrompt's exact behavior for confirm prompts
+        size.copy(terminal.getSize());
 
-        // Add prompt message with (y/N)
+        // Set up key bindings like ConsolePrompt
+        KeyMap<ConfirmOperation> keyMap = new KeyMap<>();
+        bindConfirmKeys(keyMap);
+
+        // Create prompt message like ConsolePrompt
         AttributedStringBuilder asb = new AttributedStringBuilder();
         asb.style(AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN));
         asb.append("? ");
         asb.style(AttributedStyle.DEFAULT.bold());
         asb.append(prompt.getMessage());
         asb.append(" (y/N) ");
-        displayLines.add(asb.toAttributedString());
 
-        // Update size and display using Display system
-        size.copy(terminal.getSize());
-        display.resize(size.getRows(), size.getColumns());
-        display.update(displayLines, -1);
+        ConfirmResult.ConfirmationValue confirm = ConfirmResult.ConfirmationValue.NO; // Default
+        StringBuilder buffer = new StringBuilder();
 
-        String input = reader.readLine("").trim().toLowerCase();
-        boolean confirmed = "y".equals(input) || "yes".equals(input);
+        while (true) {
+            // Build display lines exactly like ConsolePrompt: header + message + buffer
+            List<AttributedString> out = new ArrayList<>();
+            if (header != null) {
+                out.addAll(header);
+            }
 
-        ConfirmResult.ConfirmationValue value =
-                confirmed ? ConfirmResult.ConfirmationValue.YES : ConfirmResult.ConfirmationValue.NO;
+            // Create message line with current input buffer
+            AttributedStringBuilder messageBuilder = new AttributedStringBuilder();
+            messageBuilder.append(asb);
+            messageBuilder.append(buffer.toString());
+            out.add(messageBuilder.toAttributedString());
 
-        return new DefaultConfirmResult(value, prompt);
+            // Update display exactly like ConsolePrompt
+            display.resize(size.getRows(), size.getColumns());
+            int cursorRow = out.size() - 1;
+            int column = asb.columnLength() + buffer.length();
+            display.update(out, size.cursorPos(cursorRow, column));
+
+            // Read input like ConsolePrompt
+            ConfirmOperation op = bindingReader.readBinding(keyMap);
+            switch (op) {
+                case YES:
+                    buffer = new StringBuilder("y");
+                    confirm = ConfirmResult.ConfirmationValue.YES;
+                    break;
+
+                case NO:
+                    buffer = new StringBuilder("n");
+                    confirm = ConfirmResult.ConfirmationValue.NO;
+                    break;
+
+                case EXIT:
+                    return new DefaultConfirmResult(confirm, prompt);
+
+                case ESCAPE:
+                    return null; // Go back to previous prompt
+
+                case CANCEL:
+                    throw new UserInterruptException("User cancelled");
+            }
+        }
     }
 
     private PromptResult<TextPrompt> executeTextPrompt(List<AttributedString> header, TextPrompt prompt)
@@ -904,7 +975,8 @@ public class DefaultPrompter implements Prompter {
 
         // Bind action keys
         map.bind(ListOperation.EXIT, "\r");
-        map.bind(ListOperation.CANCEL, esc());
+        map.bind(ListOperation.ESCAPE, esc()); // Escape goes back to previous prompt
+        map.bind(ListOperation.CANCEL, ctrl('C')); // Ctrl+C cancels
 
         // Set up fallback for unmatched keys (like console-ui behavior)
         map.setNomatch(ListOperation.IGNORE);
@@ -1083,7 +1155,8 @@ public class DefaultPrompter implements Prompter {
         map.bind(CheckboxOperation.TOGGLE, " ");
         // Bind action keys
         map.bind(CheckboxOperation.EXIT, "\r");
-        map.bind(CheckboxOperation.CANCEL, esc());
+        map.bind(CheckboxOperation.ESCAPE, esc()); // Escape goes back to previous prompt
+        map.bind(CheckboxOperation.CANCEL, ctrl('C')); // Ctrl+C cancels
 
         // Set up fallback for unmatched keys (like console-ui behavior)
         map.setNomatch(CheckboxOperation.IGNORE);
