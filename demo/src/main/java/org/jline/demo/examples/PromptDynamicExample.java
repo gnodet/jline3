@@ -50,6 +50,7 @@ public class PromptDynamicExample {
             } else {
                 config = PrompterConfig.custom("\u276F", "\u25EF ", "\u25C9 ", "\u25EF ", false);
             }
+            config = config.withCancellableFirstPrompt(true);
 
             Prompter prompter = PrompterFactory.create(terminal, config);
 

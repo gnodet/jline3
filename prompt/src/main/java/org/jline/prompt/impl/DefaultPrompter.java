@@ -162,39 +162,7 @@ public class DefaultPrompter implements Prompter {
         try {
             open();
 
-            // Initialize header from input (like ConsolePrompt)
-            if (header != null) {
-                this.header.clear();
-                this.header.addAll(header);
-            }
-
-            // Execute each prompt sequentially
-            for (Prompt prompt : prompts) {
-                try {
-                    PromptResult<? extends Prompt> result = promptElement(this.header, prompt, null);
-                    if (result != null) {
-                        resultMap.put(prompt.getName(), result);
-
-                        // Add result to header for next prompt (like ConsolePrompt)
-                        if (!(prompt instanceof TextPrompt)) {
-                            String resp = result.getResult();
-                            if (result instanceof ConfirmResult) {
-                                ConfirmResult cr = (ConfirmResult) result;
-                                resp = cr.getConfirmed() == ConfirmResult.ConfirmationValue.YES ? "Yes" : "No";
-                            }
-                            AttributedStringBuilder message = createMessage(prompt.getMessage(), resp);
-                            this.header.add(message.toAttributedString());
-                        }
-                    }
-                } catch (UserInterruptException e) {
-                    // Propagate Ctrl+C to exit the whole demo
-                    throw e;
-                } catch (Exception e) {
-                    // Log error and continue
-                    terminal.writer().println("Error executing prompt '" + prompt.getName() + "': " + e.getMessage());
-                    terminal.flush();
-                }
-            }
+            promptInternal(header, prompts, resultMap, config.cancellableFirstPrompt());
 
             return removeNoResults(resultMap);
         } finally {
@@ -213,6 +181,7 @@ public class DefaultPrompter implements Prompter {
         Deque<Map<String, PromptResult<? extends Prompt>>> prevResults = new ArrayDeque<>();
         boolean cancellable = config.cancellableFirstPrompt();
 
+        header = new ArrayList<>(header);
         try {
             open();
             // Get our first list of prompts
@@ -221,10 +190,10 @@ public class DefaultPrompter implements Prompter {
 
             while (promptList != null) {
                 // Second and later prompts should always be cancellable
-                // TODO: Implement cancellable logic when needed
+                boolean cancellableFirstPrompt = !prevLists.isEmpty() || cancellable;
 
                 // Prompt the user
-                promptInternal(header, promptList, promptResult);
+                promptInternal(header, promptList, promptResult, cancellableFirstPrompt);
 
                 if (promptResult.isEmpty()) {
                     // The prompt was cancelled by the user, so let's go back to the
@@ -234,9 +203,7 @@ public class DefaultPrompter implements Prompter {
                     if (promptResult != null) {
                         // Remove the results of the previous prompt from the main result map
                         promptResult.forEach((k, v) -> resultMap.remove(k));
-                        if (!this.header.isEmpty()) {
-                            this.header.remove(this.header.size() - 1);
-                        }
+                        header.remove(header.size() - 1);
                     }
                 } else {
                     // We remember the list of prompts and their results
@@ -268,7 +235,8 @@ public class DefaultPrompter implements Prompter {
     protected void promptInternal(
             List<AttributedString> headerIn,
             List<? extends Prompt> promptList,
-            Map<String, PromptResult<? extends Prompt>> resultMap)
+            Map<String, PromptResult<? extends Prompt>> resultMap,
+            boolean cancellableFirstPrompt)
             throws IOException {
 
         if (!terminalInRawMode()) {
@@ -276,9 +244,7 @@ public class DefaultPrompter implements Prompter {
         }
 
         // Initialize header from input
-        if (headerIn != null && this.header.isEmpty()) {
-            this.header.addAll(headerIn);
-        }
+        this.header = headerIn;
 
         boolean backward = false;
         for (int i = resultMap.isEmpty() ? 0 : resultMap.size() - 1; i < promptList.size(); i++) {
@@ -300,7 +266,7 @@ public class DefaultPrompter implements Prompter {
                         backward = true;
                         continue;
                     } else {
-                        if (config.cancellableFirstPrompt()) {
+                        if (cancellableFirstPrompt) {
                             resultMap.clear();
                             return;
                         } else {
@@ -312,7 +278,11 @@ public class DefaultPrompter implements Prompter {
                 }
 
                 // Add result to header for next prompt (like ConsolePrompt)
-                if (!(prompt instanceof TextPrompt)) {
+                if (prompt instanceof TextPrompt) {
+                    // For text prompts, add the text content to header
+                    TextPrompt textPrompt = (TextPrompt) prompt;
+                    this.header.add(new AttributedString(textPrompt.getText()));
+                } else {
                     String resp = result.getResult();
                     if (result instanceof ConfirmResult) {
                         ConfirmResult cr = (ConfirmResult) result;
@@ -320,10 +290,6 @@ public class DefaultPrompter implements Prompter {
                     }
                     AttributedStringBuilder message = createMessage(prompt.getMessage(), resp);
                     this.header.add(message.toAttributedString());
-                } else {
-                    // For text prompts, add the text content to header
-                    TextPrompt textPrompt = (TextPrompt) prompt;
-                    this.header.add(new AttributedString(textPrompt.getText()));
                 }
 
                 resultMap.put(prompt.getName(), result);
@@ -940,10 +906,8 @@ public class DefaultPrompter implements Prompter {
     private void close() throws IOException {
         if (terminalInRawMode()) {
             // Update display with final header state
-            int cursor = (terminal.getWidth() + 1) * (header != null ? header.size() : 0);
-            if (header != null && !header.isEmpty()) {
-                display.update(header, cursor);
-            }
+            int cursor = (terminal.getWidth() + 1) * header.size();
+            display.update(header, cursor);
             terminal.setAttributes(attributes);
             terminal.puts(keypad_local);
             terminal.writer().println();
