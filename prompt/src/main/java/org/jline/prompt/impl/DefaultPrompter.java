@@ -37,6 +37,7 @@ import org.jline.terminal.Size;
 import org.jline.terminal.Terminal;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStringBuilder;
+import org.jline.utils.AttributedStyle;
 import org.jline.utils.Display;
 
 import static org.jline.keymap.KeyMap.*;
@@ -466,7 +467,12 @@ public class DefaultPrompter implements Prompter {
             display.update(out, size.cursorPos(cursorRow, column));
 
             // Read input like ConsolePrompt
-            InputOperation op = bindingReader.readBinding(keyMap);
+            InputOperation op;
+            try {
+                op = bindingReader.readBinding(keyMap);
+            } catch (org.jline.reader.UserInterruptException e) {
+                throw new UserInterruptException("User cancelled");
+            }
             switch (op) {
                 case INSERT:
                     String ch = bindingReader.getLastBinding();
@@ -551,9 +557,23 @@ public class DefaultPrompter implements Prompter {
     private InputResult executeNumberPrompt(List<AttributedString> header, NumberPrompt prompt)
             throws IOException, UserInterruptException {
 
+        String errorMessage = null;
+
         while (true) {
-            // Execute as regular input prompt first
-            InputResult result = executeInputPrompt(header, prompt);
+            // Build header with error message if present
+            List<AttributedString> currentHeader = new ArrayList<>(header);
+            if (errorMessage != null) {
+                // Add error message in red with ">> " prefix like Inquirer.js
+                AttributedString errorLine = new AttributedStringBuilder()
+                        .style(AttributedStyle.DEFAULT.foreground(AttributedStyle.RED))
+                        .append(">> ")
+                        .append(errorMessage)
+                        .toAttributedString();
+                currentHeader.add(errorLine);
+            }
+
+            // Execute as regular input prompt with updated header
+            InputResult result = executeInputPrompt(currentHeader, prompt);
             if (result == null) {
                 return null; // User cancelled
             }
@@ -569,8 +589,7 @@ public class DefaultPrompter implements Prompter {
 
                 // Check if decimals are allowed
                 if (!prompt.allowDecimals() && input.contains(".")) {
-                    terminal.writer().println("Error: " + "Please enter a whole number");
-                    terminal.flush();
+                    errorMessage = "Please enter a whole number";
                     continue;
                 }
 
@@ -578,16 +597,14 @@ public class DefaultPrompter implements Prompter {
                 Double min = prompt.getMin();
                 Double max = prompt.getMax();
                 if ((min != null && value < min) || (max != null && value > max)) {
-                    terminal.writer().println("Error: " + prompt.getOutOfRangeMessage());
-                    terminal.flush();
+                    errorMessage = prompt.getOutOfRangeMessage();
                     continue;
                 }
 
                 return new DefaultInputResult(input, input, prompt);
 
             } catch (NumberFormatException e) {
-                terminal.writer().println("Error: " + prompt.getInvalidNumberMessage());
-                terminal.flush();
+                errorMessage = prompt.getInvalidNumberMessage();
                 // Continue the loop to ask again
             }
         }
@@ -634,7 +651,12 @@ public class DefaultPrompter implements Prompter {
             int column = startColumn + searchTerm.length();
             display.update(out, size.cursorPos(cursorRow, column));
 
-            InputOperation op = bindingReader.readBinding(keyMap);
+            InputOperation op;
+            try {
+                op = bindingReader.readBinding(keyMap);
+            } catch (org.jline.reader.UserInterruptException e) {
+                throw new UserInterruptException("User cancelled");
+            }
             switch (op) {
                 case INSERT:
                     String ch = bindingReader.getLastBinding();
@@ -707,7 +729,12 @@ public class DefaultPrompter implements Prompter {
         keyMap.bind(InputOperation.ESCAPE, "\u001b");
         keyMap.bind(InputOperation.CANCEL, "\u0003");
 
-        InputOperation op = bindingReader.readBinding(keyMap);
+        InputOperation op;
+        try {
+            op = bindingReader.readBinding(keyMap);
+        } catch (org.jline.reader.UserInterruptException e) {
+            throw new UserInterruptException("User cancelled");
+        }
         switch (op) {
             case EXIT:
                 // Launch editor
@@ -777,6 +804,9 @@ public class DefaultPrompter implements Prompter {
             // Open the file and run the editor
             openMethod.invoke(nano, java.util.Collections.singletonList(tempFile.getName()));
             runMethod.invoke(nano);
+
+            // Reset terminal state after editor
+            terminal.flush();
 
             // Read the result
             StringBuilder result = new StringBuilder();
@@ -1080,7 +1110,12 @@ public class DefaultPrompter implements Prompter {
             refreshListDisplay(header, prompt.getMessage(), items, selectRow, prompt);
 
             // Read user input using BindingReader
-            ListOperation op = bindingReader.readBinding(keyMap);
+            ListOperation op;
+            try {
+                op = bindingReader.readBinding(keyMap);
+            } catch (org.jline.reader.UserInterruptException e) {
+                throw new UserInterruptException("User cancelled");
+            }
 
             switch (op) {
                 case FORWARD_ONE_LINE:
@@ -1156,7 +1191,12 @@ public class DefaultPrompter implements Prompter {
             refreshCheckboxDisplay(header, prompt.getMessage(), items, selectRow, selectedIds, prompt);
 
             // Read user input using BindingReader
-            CheckboxOperation op = bindingReader.readBinding(keyMap);
+            CheckboxOperation op;
+            try {
+                op = bindingReader.readBinding(keyMap);
+            } catch (org.jline.reader.UserInterruptException e) {
+                throw new UserInterruptException("User cancelled");
+            }
 
             switch (op) {
                 case FORWARD_ONE_LINE:
@@ -1235,7 +1275,12 @@ public class DefaultPrompter implements Prompter {
 
         // Interactive selection loop
         while (true) {
-            ChoiceOperation op = bindingReader.readBinding(keyMap);
+            ChoiceOperation op;
+            try {
+                op = bindingReader.readBinding(keyMap);
+            } catch (org.jline.reader.UserInterruptException e) {
+                throw new UserInterruptException("User cancelled");
+            }
 
             switch (op) {
                 case INSERT:
@@ -1322,7 +1367,12 @@ public class DefaultPrompter implements Prompter {
             display.update(out, size.cursorPos(cursorRow, column));
 
             // Read input like ConsolePrompt
-            ConfirmOperation op = bindingReader.readBinding(keyMap);
+            ConfirmOperation op;
+            try {
+                op = bindingReader.readBinding(keyMap);
+            } catch (org.jline.reader.UserInterruptException e) {
+                throw new UserInterruptException("User cancelled");
+            }
             switch (op) {
                 case YES:
                     buffer = new StringBuilder("y");
