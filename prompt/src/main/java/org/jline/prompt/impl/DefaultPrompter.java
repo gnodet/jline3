@@ -11,6 +11,7 @@ package org.jline.prompt.impl;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.jline.keymap.BindingReader;
 import org.jline.keymap.KeyMap;
@@ -256,7 +258,8 @@ public class DefaultPrompter implements Prompter {
             Prompt prompt = promptList.get(i);
             try {
                 if (backward) {
-                    // Remove the previous result from resultMap - this is handled in the dynamic prompt method
+                    // Remove the previous result from resultMap
+                    removePreviousResult(resultMap);
                     backward = false;
                 }
 
@@ -328,7 +331,7 @@ public class DefaultPrompter implements Prompter {
     }
 
     /**
-     * Remove previous result when going backward (like ConsolePrompt).
+     * Remove previous result when going backward.
      */
     private void removePreviousResult(Map<String, PromptResult<? extends Prompt>> promptResult) {
         // Find the prompt that was executed to determine how many lines to remove
@@ -371,7 +374,7 @@ public class DefaultPrompter implements Prompter {
             List<AttributedString> header, Prompt prompt, PromptResult<? extends Prompt> oldResult)
             throws UserInterruptException {
         try {
-            // Header is managed by individual prompt methods (like ConsolePrompt)
+            // Header is managed by individual prompt methods
             return executePrompt(header, prompt);
         } catch (UserInterruptException e) {
             // Propagate Ctrl+C to exit the whole demo
@@ -459,8 +462,8 @@ public class DefaultPrompter implements Prompter {
                 }
                 completionMatcher.compile(options, false, completingWord, false, 0, null);
                 matches = completionMatcher.matches(possible).stream()
-                        .sorted(java.util.Comparator.naturalOrder())
-                        .collect(java.util.stream.Collectors.toList());
+                        .sorted(Comparator.naturalOrder())
+                        .collect(Collectors.toList());
                 if (matches.size() > ReaderUtils.getInt(reader, LineReader.MENU_LIST_MAX, 10)) {
                     displayCandidates = false;
                 }
@@ -1075,6 +1078,7 @@ public class DefaultPrompter implements Prompter {
         // Initialize display
         resetDisplay();
         firstItemRow = (header != null ? header.size() : 0) + 1; // Header + message line
+        range = null;
 
         // Calculate column layout
         calculateColumnLayout(items);
@@ -1158,6 +1162,7 @@ public class DefaultPrompter implements Prompter {
         // Initialize display
         resetDisplay();
         firstItemRow = (header != null ? header.size() : 0) + 1; // Header + message line
+        range = null;
 
         // Calculate column layout
         calculateColumnLayout(items);
@@ -1708,7 +1713,6 @@ public class DefaultPrompter implements Prompter {
             } else {
                 fillIndicatorSpace(asb);
             }
-            asb.append(" ");
 
             // Checkbox state
             if (selectedIds.contains(item.getName())) {
@@ -1716,15 +1720,16 @@ public class DefaultPrompter implements Prompter {
             } else {
                 asb.styled(config.style(PrompterConfig.BE), config.uncheckedBox());
             }
+            asb.append(" ");
         } else {
             // Disabled item
             fillIndicatorSpace(asb);
-            asb.append(" ");
             if (item.isDisabled()) {
                 asb.styled(config.style(PrompterConfig.BD), config.unavailable());
             } else {
                 fillCheckboxSpace(asb);
             }
+            asb.append(" ");
         }
 
         // Item text
