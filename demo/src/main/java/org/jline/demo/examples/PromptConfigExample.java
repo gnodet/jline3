@@ -13,7 +13,6 @@ import java.util.Map;
 
 import org.jline.prompt.*;
 import org.jline.prompt.impl.DefaultPrompter;
-import org.jline.prompt.impl.DefaultPrompterConfig;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 
@@ -27,28 +26,12 @@ public class PromptConfigExample {
         Terminal terminal = TerminalBuilder.builder().build();
 
         // Create a custom configuration
-        PrompterConfig customConfig = new DefaultPrompterConfig() {
-            @Override
-            public String indicator() {
-                return "→"; // Custom selection indicator
-            }
-
-            @Override
-            public String checkedBox() {
-                return "☑"; // Custom checked checkbox
-            }
-
-            @Override
-            public String uncheckedBox() {
-                return "☐"; // Custom unchecked checkbox
-            }
-
-            @Override
-            public String unavailable() {
-                return "✗"; // Custom unavailable indicator
-            }
-        };
-
+        PrompterConfig customConfig = PrompterConfig.custom(
+                "→", // indicator
+                "☐ ", // unchecked box
+                "☑ ", // checked box
+                "✗ ", // unavailable item
+                null, false);
         // Create prompter with custom configuration
         Prompter prompter = new DefaultPrompter(terminal, customConfig);
 

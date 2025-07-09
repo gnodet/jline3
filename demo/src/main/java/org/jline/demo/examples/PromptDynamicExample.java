@@ -20,7 +20,6 @@ import org.jline.terminal.TerminalBuilder;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStringBuilder;
 import org.jline.utils.AttributedStyle;
-import org.jline.utils.OSUtils;
 
 /**
  * Dynamic prompt example showing conditional prompts based on user responses.
@@ -44,13 +43,7 @@ public class PromptDynamicExample {
             }
 
             // Create prompter with appropriate config for the platform
-            PrompterConfig config;
-            if (OSUtils.IS_WINDOWS) {
-                config = PrompterConfig.custom(">", "( )", "(x)", "( )", false);
-            } else {
-                config = PrompterConfig.custom("\u276F", "\u25EF ", "\u25C9 ", "\u25EF ", false);
-            }
-            config = config.withCancellableFirstPrompt(true);
+            PrompterConfig config = PrompterConfig.defaults().withCancellableFirstPrompt(true);
 
             Prompter prompter = PrompterFactory.create(terminal, config);
 

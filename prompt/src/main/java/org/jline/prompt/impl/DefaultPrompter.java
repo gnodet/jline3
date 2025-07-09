@@ -32,7 +32,6 @@ import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStringBuilder;
 import org.jline.utils.AttributedStyle;
 import org.jline.utils.Display;
-import org.jline.utils.OSUtils;
 
 import static org.jline.keymap.KeyMap.*;
 import static org.jline.utils.InfoCmp.Capability.*;
@@ -80,7 +79,7 @@ public class DefaultPrompter implements Prompter {
      * @param terminal the terminal to use
      */
     public DefaultPrompter(Terminal terminal) {
-        this(null, terminal, new DefaultConfig());
+        this(null, terminal, PrompterConfig.defaults());
     }
 
     /**
@@ -336,16 +335,12 @@ public class DefaultPrompter implements Prompter {
     /**
      * Create a message with prompt and response (like ConsolePrompt).
      */
-    private AttributedStringBuilder createMessage(String promptMessage, String response) {
+    private AttributedStringBuilder createMessage(String message, String response) {
         AttributedStringBuilder asb = new AttributedStringBuilder();
-        asb.style(AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN));
-        asb.append("? ");
-        asb.style(AttributedStyle.DEFAULT.bold());
-        asb.append(promptMessage);
+        asb.style(config.style(PrompterConfig.PR)).append("? ");
+        asb.style(config.style(PrompterConfig.ME)).append(message).append(" ");
         if (response != null) {
-            asb.style(AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN));
-            asb.append(" ");
-            asb.append(response);
+            asb.style(config.style(PrompterConfig.AN)).append(response);
         }
         return asb;
     }
@@ -998,7 +993,7 @@ public class DefaultPrompter implements Prompter {
         // Add selection indicator and key if available
         String key = item instanceof ChoiceItem ? ((ChoiceItem) item).getKey() + " - " : "";
         if (isSelected) {
-            asb.append(config.indicatorAttributed())
+            asb.styled(config.style(PrompterConfig.CURSOR), config.indicator())
                     .style(AttributedStyle.DEFAULT.inverse())
                     .append(" ")
                     .append(key)
@@ -1048,7 +1043,7 @@ public class DefaultPrompter implements Prompter {
 
                     if (isSelected) {
                         itemBuilder
-                                .append(config.indicatorAttributed())
+                                .append(config.indicator())
                                 .style(AttributedStyle.DEFAULT.inverse())
                                 .append(" ")
                                 .append(key)
@@ -1096,7 +1091,7 @@ public class DefaultPrompter implements Prompter {
      * Fill space for indicator alignment.
      */
     private AttributedStringBuilder fillIndicatorSpace(AttributedStringBuilder asb) {
-        for (int i = 0; i < config.indicatorAttributed().length(); i++) {
+        for (int i = 0; i < config.indicator().length(); i++) {
             asb.append(" ");
         }
         return asb;
@@ -1186,25 +1181,24 @@ public class DefaultPrompter implements Prompter {
         if (item.isSelectable()) {
             // Selection indicator
             if (isSelected) {
-                asb.append(config.indicatorAttributed())
-                        .style(AttributedStyle.DEFAULT)
-                        .append(" ");
+                asb.styled(config.style(PrompterConfig.CURSOR), config.indicator());
             } else {
-                fillIndicatorSpace(asb).append(" ");
+                fillIndicatorSpace(asb);
             }
+            asb.append(" ");
 
             // Checkbox state
             if (selectedIds.contains(item.getName())) {
-                asb.append(config.checkedBoxAttributed());
+                asb.styled(config.style(PrompterConfig.BE), config.checkedBox());
             } else {
-                asb.append(config.uncheckedBoxAttributed());
+                asb.styled(config.style(PrompterConfig.BE), config.uncheckedBox());
             }
         } else {
             // Disabled item
             fillIndicatorSpace(asb);
             asb.append(" ");
             if (item.isDisabled()) {
-                asb.append(config.unavailableAttributed());
+                asb.styled(config.style(PrompterConfig.BD), config.unavailable());
             } else {
                 fillCheckboxSpace(asb);
             }
@@ -1246,7 +1240,7 @@ public class DefaultPrompter implements Prompter {
                         // Selection indicator
                         if (isSelected) {
                             itemBuilder
-                                    .append(config.indicatorAttributed())
+                                    .append(config.indicator())
                                     .style(AttributedStyle.DEFAULT)
                                     .append(" ");
                         } else {
@@ -1255,16 +1249,16 @@ public class DefaultPrompter implements Prompter {
 
                         // Checkbox state
                         if (selectedIds.contains(item.getName())) {
-                            itemBuilder.append(config.checkedBoxAttributed());
+                            itemBuilder.append(config.checkedBox());
                         } else {
-                            itemBuilder.append(config.uncheckedBoxAttributed());
+                            itemBuilder.append(config.uncheckedBox());
                         }
                     } else {
                         // Disabled item
                         fillIndicatorSpace(itemBuilder);
                         itemBuilder.append(" ");
                         if (item.isDisabled()) {
-                            itemBuilder.append(config.unavailableAttributed());
+                            itemBuilder.append(config.unavailable());
                         } else {
                             fillCheckboxSpace(itemBuilder);
                         }
@@ -1305,7 +1299,7 @@ public class DefaultPrompter implements Prompter {
      * Fill space for checkbox alignment.
      */
     private void fillCheckboxSpace(AttributedStringBuilder asb) {
-        for (int i = 0; i < config.checkedBoxAttributed().length(); i++) {
+        for (int i = 0; i < config.checkedBox().length(); i++) {
             asb.append(" ");
         }
     }
@@ -1450,11 +1444,10 @@ public class DefaultPrompter implements Prompter {
         }
 
         // Add space for indicator and checkbox symbols
-        maxWidth += config.indicatorAttributed().length() + 1; // indicator + space
+        maxWidth += config.indicator().length() + 1; // indicator + space
         if (items.get(0) instanceof CheckboxItem) {
-            maxWidth += Math.max(
-                    config.checkedBoxAttributed().length(),
-                    config.uncheckedBoxAttributed().length());
+            maxWidth +=
+                    Math.max(display.wcwidth(config.checkedBox()), display.wcwidth(config.uncheckedBox()));
         }
 
         // Calculate how many columns fit
@@ -1561,108 +1554,6 @@ public class DefaultPrompter implements Prompter {
             return new int[] {index / columns, index % columns};
         } else {
             return new int[] {index % lines, index / lines};
-        }
-    }
-
-    /**
-     * Default implementation of the Prompter.Config interface.
-     */
-    public static class DefaultConfig implements PrompterConfig {
-        private final String indicator;
-        private final String uncheckedBox;
-        private final String checkedBox;
-        private final String unavailable;
-        private final boolean cancellableFirstPrompt;
-
-        /**
-         * Create a new DefaultConfig with default values.
-         */
-        public DefaultConfig() {
-            this(null, null, null, null, false);
-        }
-
-        /**
-         * Create a new DefaultConfig with the given values.
-         *
-         * @param indicator the indicator character/string
-         * @param uncheckedBox the unchecked box character/string
-         * @param checkedBox the checked box character/string
-         * @param unavailable the unavailable item character/string
-         * @param cancellableFirstPrompt if the first prompt can be cancelled
-         */
-        public DefaultConfig(
-                String indicator,
-                String uncheckedBox,
-                String checkedBox,
-                String unavailable,
-                boolean cancellableFirstPrompt) {
-            // Set platform-specific defaults if not explicitly provided
-            if (indicator == null) {
-                if (OSUtils.IS_WINDOWS) {
-                    this.indicator = ">";
-                } else {
-                    this.indicator = "\u276F"; // ❯
-                }
-            } else {
-                this.indicator = indicator;
-            }
-
-            if (uncheckedBox == null) {
-                if (OSUtils.IS_WINDOWS) {
-                    this.uncheckedBox = "( )";
-                } else {
-                    this.uncheckedBox = "\u25EF "; // ◯
-                }
-            } else {
-                this.uncheckedBox = uncheckedBox;
-            }
-
-            if (checkedBox == null) {
-                if (OSUtils.IS_WINDOWS) {
-                    this.checkedBox = "(x)";
-                } else {
-                    this.checkedBox = "\u25C9 "; // ◉
-                }
-            } else {
-                this.checkedBox = checkedBox;
-            }
-
-            if (unavailable == null) {
-                if (OSUtils.IS_WINDOWS) {
-                    this.unavailable = "( )";
-                } else {
-                    this.unavailable = "\u25EF "; // ◯
-                }
-            } else {
-                this.unavailable = unavailable;
-            }
-
-            this.cancellableFirstPrompt = cancellableFirstPrompt;
-        }
-
-        @Override
-        public String indicator() {
-            return indicator;
-        }
-
-        @Override
-        public String uncheckedBox() {
-            return uncheckedBox;
-        }
-
-        @Override
-        public String checkedBox() {
-            return checkedBox;
-        }
-
-        @Override
-        public String unavailable() {
-            return unavailable;
-        }
-
-        @Override
-        public boolean cancellableFirstPrompt() {
-            return cancellableFirstPrompt;
         }
     }
 }

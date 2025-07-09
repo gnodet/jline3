@@ -28,7 +28,7 @@ public final class PrompterFactory {
      * @return a new Prompter instance
      */
     public static Prompter create(Terminal terminal) {
-        return create(terminal, new DefaultPrompter.DefaultConfig());
+        return create(terminal, PrompterConfig.defaults());
     }
 
     /**
