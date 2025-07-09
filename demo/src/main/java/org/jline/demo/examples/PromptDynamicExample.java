@@ -11,6 +11,8 @@ package org.jline.demo.examples;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.jline.prompt.*;
 import org.jline.prompt.impl.DefaultPromptBuilder;
@@ -22,8 +24,9 @@ import org.jline.utils.AttributedStringBuilder;
 import org.jline.utils.AttributedStyle;
 
 /**
- * Dynamic prompt example showing conditional prompts based on user responses.
- * This is a port of the BasicDynamic ConsoleUI demo to the new prompt API.
+ * Enhanced dynamic prompt example showcasing all new prompt types.
+ * Demonstrates password, number, search, editor prompts alongside traditional ones.
+ * This is an enhanced version of the BasicDynamic ConsoleUI demo.
  */
 public class PromptDynamicExample {
     private static final AttributedStyle ITALIC_GREEN =
@@ -50,13 +53,13 @@ public class PromptDynamicExample {
             List<AttributedString> header = Arrays.asList(
                     new AttributedStringBuilder()
                             .style(ITALIC_GREEN)
-                            .append("Hello Dynamic World!")
+                            .append("Enhanced JLine Prompt Demo!")
                             .toAttributedString(),
                     new AttributedString(
-                            "This is a demonstration of the new JLine Prompt API. It provides a simple console interface"),
+                            "This demonstration showcases all the new prompt types in the JLine Prompt API:"),
                     new AttributedString(
-                            "for querying information from the user. This API is inspired by Inquirer.js and replaces"),
-                    new AttributedString("the deprecated ConsoleUI module."));
+                            "password, number, search, editor, plus traditional list, checkbox, and input prompts."),
+                    new AttributedString("The API is inspired by Inquirer.js and replaces the deprecated ConsoleUI module."));
 
             // Start the dynamic prompt flow using the proper dynamic prompting API
             Map<String, ? extends PromptResult<? extends Prompt>> results =
@@ -80,210 +83,226 @@ public class PromptDynamicExample {
 
     /**
      * Dynamic prompt provider that creates prompts based on previous results.
+     * This enhanced version showcases all new prompt types.
      */
     private static List<? extends Prompt> createDynamicPrompts(
             Map<String, ? extends PromptResult<? extends Prompt>> previousResults) {
 
-        // Step 1: If no previous results, start with initial prompts
+        // Step 1: Start with user registration (password, number prompts)
         if (previousResults.isEmpty()) {
-            return createInitialPrompts();
+            return createRegistrationPrompts();
         }
 
-        // Step 2: If we have name and product, create product-specific prompts
-        if (previousResults.containsKey("name")
-                && previousResults.containsKey("product")
-                && !previousResults.containsKey("pizzatext")
-                && !previousResults.containsKey("hamburgertext")) {
-
-            String product = ((ListResult) previousResults.get("product")).getSelectedId();
-            if ("pizza".equals(product)) {
-                return createPizzaPrompts();
-            } else {
-                return createHamburgerPrompts();
-            }
+        // Step 2: After registration, show search and editor prompts
+        if (previousResults.containsKey("username") && previousResults.containsKey("password")
+                && !previousResults.containsKey("searchdemo")) {
+            return createSearchAndEditorPrompts();
         }
 
-        // Step 3: If we have product-specific results, create final prompts
-        if ((previousResults.containsKey("topping") || previousResults.containsKey("ingredients"))
-                && !previousResults.containsKey("finaltext")) {
-            return createFinalPrompts();
+        // Step 3: After search/editor, show traditional prompts (list, checkbox)
+        if (previousResults.containsKey("searchdemo") && previousResults.containsKey("notes")
+                && !previousResults.containsKey("category")) {
+            return createTraditionalPrompts();
+        }
+
+        // Step 4: Final confirmation and summary
+        if (previousResults.containsKey("category") && previousResults.containsKey("features")
+                && !previousResults.containsKey("summary")) {
+            return createSummaryPrompts();
         }
 
         // No more prompts needed
         return null;
     }
 
-    private static List<? extends Prompt> createInitialPrompts() {
+    /**
+     * Step 1: Registration prompts showcasing password and number prompts
+     */
+    private static List<? extends Prompt> createRegistrationPrompts() {
         PromptBuilder builder = new DefaultPromptBuilder();
 
+        // Text header
+        builder.createText()
+                .name("regheader")
+                .text("=== User Registration ===\nLet's start by creating your account.")
+                .addPrompt();
+
+        // Input prompt for username
         builder.createInputPrompt()
-                .name("name")
-                .message("Please enter your name")
-                .defaultValue("John Doe")
+                .name("username")
+                .message("Enter your username")
+                .defaultValue("demo_user")
                 .addPrompt();
 
-        builder.createListPrompt()
-                .name("product")
-                .message("What do you want to order?")
-                .newItem("pizza")
-                .text("Pizza")
-                .add()
-                .newItem("hamburger")
-                .text("Hamburger")
-                .add()
+        // Password prompt (new feature)
+        builder.createPasswordPrompt()
+                .name("password")
+                .message("Enter your password")
+                .mask('*')
+                .showMask(true)
+                .addPrompt();
+
+        // Number prompt for age (new feature)
+        builder.createNumberPrompt()
+                .name("age")
+                .message("Enter your age")
+                .min(13.0)
+                .max(120.0)
+                .allowDecimals(false)
                 .addPrompt();
 
         return builder.build();
     }
 
-    private static List<? extends Prompt> createPizzaPrompts() {
+    /**
+     * Step 2: Search and Editor prompts showcasing new interactive features
+     */
+    private static List<? extends Prompt> createSearchAndEditorPrompts() {
         PromptBuilder builder = new DefaultPromptBuilder();
 
-        // Add text prompt like in the original BasicDynamic
+        // Text header
         builder.createText()
-                .name("pizzatext")
-                .text("Pizza time!")
+                .name("searchheader")
+                .text("=== Search and Editor Demo ===\nNow let's try the new search and editor features.")
                 .addPrompt();
 
+        // Search prompt (new feature)
+        List<String> technologies = Arrays.asList(
+                "Java", "JavaScript", "Python", "TypeScript", "Kotlin", "Scala",
+                "React", "Vue.js", "Angular", "Spring Boot", "Node.js", "Express",
+                "Docker", "Kubernetes", "AWS", "Azure", "PostgreSQL", "MongoDB");
+
+        Function<String, List<String>> searchFunction = term ->
+                technologies.stream()
+                        .filter(tech -> tech.toLowerCase().contains(term.toLowerCase()))
+                        .collect(Collectors.toList());
+
+        builder.<String>createSearchPrompt()
+                .name("searchdemo")
+                .message("Search for a technology")
+                .searchFunction(searchFunction)
+                .displayFunction(tech -> tech)
+                .valueFunction(tech -> tech)
+                .placeholder("Type to search technologies...")
+                .minSearchLength(1)
+                .maxResults(8)
+                .addPrompt();
+
+        // Editor prompt (new feature)
+        builder.createEditorPrompt()
+                .name("notes")
+                .message("Edit your project notes")
+                .initialText("Project Notes:\n\n1. Technology selected: [will be filled from search]\n2. Goals:\n   - Build a modern application\n   - Use best practices\n   - Focus on user experience\n\n3. Next steps:\n   - Set up development environment\n   - Create project structure\n   - Implement core features\n\nFeel free to edit these notes...")
+                .fileExtension("md")
+                .title("Project Notes Editor")
+                .showLineNumbers(true)
+                .enableWrapping(true)
+                .addPrompt();
+
+        return builder.build();
+    }
+
+    /**
+     * Step 3: Traditional prompts showcasing list and checkbox with separators
+     */
+    private static List<? extends Prompt> createTraditionalPrompts() {
+        PromptBuilder builder = new DefaultPromptBuilder();
+
+        // Text header
+        builder.createText()
+                .name("tradheader")
+                .text("=== Traditional Prompts ===\nNow let's see the enhanced list and checkbox prompts with separators.")
+                .addPrompt();
+
+        // List prompt with separators
         builder.createListPrompt()
-                .name("pizzatype")
-                .message("Which pizza do you want?")
-                .newItem("margherita")
-                .text("Margherita")
+                .name("category")
+                .message("Select a project category")
+                .newItem("web")
+                .text("Web Application")
                 .add()
-                .newItem("veneziana")
-                .text("Veneziana")
+                .newItem("mobile")
+                .text("Mobile App")
                 .add()
-                .newItem("hawai")
-                .text("Hawai")
+                .newItem("desktop")
+                .text("Desktop Application")
                 .add()
-                .newItem("quattro")
-                .text("Quattro Stagioni")
+                .newSeparator("specialized")
+                .add()
+                .newItem("api")
+                .text("REST API Service")
+                .add()
+                .newItem("microservice")
+                .text("Microservice")
                 .add()
                 .addPrompt();
 
-        // Add separators like in the original BasicDynamic
+        // Checkbox prompt with separators and pagination
         builder.createCheckboxPrompt()
-                .name("topping")
-                .message("Please select additional toppings:")
-                .newSeparator("standard toppings")
+                .name("features")
+                .message("Select features to include:")
+                .newSeparator("core features")
                 .add()
-                .newItem("cheese")
-                .text("Cheese")
+                .newItem("auth")
+                .text("Authentication")
+                .checked(true)
                 .add()
-                .newItem("bacon")
-                .text("Bacon")
+                .newItem("db")
+                .text("Database Integration")
                 .add()
-                .newItem("onions")
-                .text("Onions")
+                .newItem("api_client")
+                .text("API Client")
+                .add()
+                .newSeparator("advanced features")
+                .add()
+                .newItem("cache")
+                .text("Caching Layer")
+                .add()
+                .newItem("search")
+                .text("Full-text Search")
+                .add()
+                .newItem("analytics")
+                .text("Analytics Dashboard")
                 .disabled(true)
-                .disabledText("Sorry. Out of stock.")
+                .disabledText("Premium feature")
                 .add()
-                .newSeparator()
-                .text("special toppings")
+                .newSeparator("experimental")
                 .add()
-                .newItem("salami")
-                .text("Very hot salami")
-                .checked(true)
+                .newItem("ai")
+                .text("AI Integration")
                 .add()
-                .newItem("salmon")
-                .text("Smoked Salmon")
+                .newItem("ml")
+                .text("Machine Learning")
                 .add()
-                .newSeparator("and our speciality...")
-                .add()
-                .newItem("special")
-                .text("Anchovies, and olives")
-                .checked(true)
-                .add()
+                .pageSize(6)
+                .showPageIndicator(true)
                 .addPrompt();
 
         return builder.build();
     }
 
-    private static List<? extends Prompt> createHamburgerPrompts() {
+    /**
+     * Step 4: Summary and confirmation prompts
+     */
+    private static List<? extends Prompt> createSummaryPrompts() {
         PromptBuilder builder = new DefaultPromptBuilder();
 
-        // Add text prompt like in the original BasicDynamic
+        // Text summary
         builder.createText()
-                .name("hamburgertext")
-                .text("Hamburger time!")
+                .name("summary")
+                .text("=== Demo Complete! ===\nYou've now experienced all the new prompt types:\n" +
+                      "✓ Password prompt with masking\n" +
+                      "✓ Number prompt with validation\n" +
+                      "✓ Search prompt with real-time filtering\n" +
+                      "✓ Editor prompt with JLine's nano\n" +
+                      "✓ Enhanced list and checkbox prompts with separators\n" +
+                      "✓ Pagination support for long lists")
                 .addPrompt();
 
-        builder.createListPrompt()
-                .name("hamburgertype")
-                .message("Which hamburger do you want?")
-                .newItem("cheese")
-                .text("Cheeseburger")
-                .add()
-                .newItem("chicken")
-                .text("Chickenburger")
-                .add()
-                .newItem("veggie")
-                .text("Veggieburger")
-                .add()
-                .addPrompt();
-
-        // Add separators like in the original BasicDynamic
-        builder.createCheckboxPrompt()
-                .name("ingredients")
-                .message("Please select additional ingredients:")
-                .newSeparator("standard ingredients")
-                .add()
-                .newItem("tomato")
-                .text("Tomato")
-                .add()
-                .newItem("lettuce")
-                .text("Lettuce")
-                .add()
-                .newItem("onions")
-                .text("Onions")
-                .disabled(true)
-                .disabledText("Sorry. Out of stock.")
-                .add()
-                .newSeparator()
-                .text("special ingredients")
-                .add()
-                .newItem("crispybacon")
-                .text("Crispy Bacon")
-                .checked(true)
-                .add()
-                .addPrompt();
-
-        return builder.build();
-    }
-
-    private static List<? extends Prompt> createFinalPrompts() {
-        PromptBuilder builder = new DefaultPromptBuilder();
-
-        // Add styled text like in the original BasicDynamic
-        builder.createText()
-                .name("finaltext")
-                .text("###################\nFinalize your order\n###################")
-                .addPrompt();
-
-        // Add separators to payment options like in the original
-        builder.createListPrompt()
-                .name("payment")
-                .message("How do you want to pay?")
-                .newItem("cash")
-                .text("Cash")
-                .add()
-                .newItem("visa")
-                .text("Visa Card")
-                .add()
-                .newItem("master")
-                .text("Master Card")
-                .add()
-                .newSeparator("online payment")
-                .add()
-                .newItem("paypal")
-                .text("Paypal")
-                .add()
-                .addPrompt();
-
+        // Final confirmation
         builder.createConfirmPrompt()
-                .name("delivery")
-                .message("Is this order for delivery?")
+                .name("satisfied")
+                .message("Are you satisfied with the new prompt features?")
                 .defaultValue(true)
                 .addPrompt();
 
