@@ -111,4 +111,19 @@ public interface CheckboxBuilder extends BaseBuilder<CheckboxBuilder> {
      * @return this builder
      */
     CheckboxBuilder showPageIndicator(boolean showPageIndicator);
+
+    /**
+     * Create a new separator with no text.
+     *
+     * @return a separator builder
+     */
+    CheckboxSeparatorBuilder newSeparator();
+
+    /**
+     * Create a new separator with the given text.
+     *
+     * @param text the separator text
+     * @return a separator builder
+     */
+    CheckboxSeparatorBuilder newSeparator(String text);
 }

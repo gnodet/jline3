@@ -31,6 +31,15 @@ public interface PromptItem {
     }
 
     /**
+     * Whether this item is selectable.
+     *
+     * @return true if this item is selectable
+     */
+    default boolean isSelectable() {
+        return !isDisabled();
+    }
+
+    /**
      * Get the text to display for this item.
      *
      * @return the text

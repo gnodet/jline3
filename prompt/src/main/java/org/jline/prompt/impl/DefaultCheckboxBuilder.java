@@ -13,7 +13,9 @@ import java.util.List;
 
 import org.jline.prompt.CheckboxBuilder;
 import org.jline.prompt.CheckboxItem;
+import org.jline.prompt.CheckboxSeparatorBuilder;
 import org.jline.prompt.PromptBuilder;
+import org.jline.prompt.SeparatorItem;
 
 /**
  * Default implementation of CheckboxBuilder.
@@ -153,6 +155,25 @@ public class DefaultCheckboxBuilder implements CheckboxBuilder {
     public CheckboxBuilder showPageIndicator(boolean showPageIndicator) {
         this.showPageIndicator = showPageIndicator;
         return this;
+    }
+
+    @Override
+    public CheckboxSeparatorBuilder newSeparator() {
+        return new DefaultCheckboxSeparatorBuilder(this);
+    }
+
+    @Override
+    public CheckboxSeparatorBuilder newSeparator(String text) {
+        return new DefaultCheckboxSeparatorBuilder(this, text);
+    }
+
+    /**
+     * Add a separator item to the list.
+     *
+     * @param separatorItem the separator item to add
+     */
+    public void addSeparator(SeparatorItem separatorItem) {
+        items.add((CheckboxItem) separatorItem);
     }
 
     /**

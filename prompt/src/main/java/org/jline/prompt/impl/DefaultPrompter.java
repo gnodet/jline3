@@ -1516,15 +1516,22 @@ public class DefaultPrompter implements Prompter {
     private AttributedString buildSingleItemLine(ListItem item, boolean isSelected) {
         AttributedStringBuilder asb = new AttributedStringBuilder();
 
+        // Check if this is a separator
+        if (item instanceof SeparatorItem) {
+            // Separators don't get indicators, just display their text
+            asb.append(item.getText());
+            return asb.toAttributedString();
+        }
+
         // Add selection indicator and key if available
         String key = item instanceof ChoiceItem ? ((ChoiceItem) item).getKey() + " - " : "";
-        if (isSelected) {
+        if (isSelected && item.isSelectable()) {
             asb.styled(config.style(PrompterConfig.CURSOR), config.indicator())
                     .style(config.style(PrompterConfig.SE))
                     .append(" ")
                     .append(key)
                     .append(item.getText());
-        } else if (!item.isDisabled()) {
+        } else if (!item.isDisabled() && item.isSelectable()) {
             fillIndicatorSpace(asb);
             asb.append(" ").append(key).append(item.getText());
         } else {
@@ -1624,6 +1631,16 @@ public class DefaultPrompter implements Prompter {
     }
 
     /**
+     * Fill space for checkbox alignment.
+     */
+    private AttributedStringBuilder fillCheckboxSpace(AttributedStringBuilder asb) {
+        for (int i = 0; i < display.wcwidth(config.checkedBox()); i++) {
+            asb.append(" ");
+        }
+        return asb;
+    }
+
+    /**
      * Bind keys for checkbox prompt operations.
      */
     private void bindCheckboxKeys(KeyMap<CheckboxOperation> map, boolean multiColumn) {
@@ -1706,19 +1723,31 @@ public class DefaultPrompter implements Prompter {
     private AttributedString buildSingleCheckboxLine(CheckboxItem item, boolean isSelected, Set<String> selectedIds) {
         AttributedStringBuilder asb = new AttributedStringBuilder();
 
+        // Check if this is a separator
+        if (item instanceof SeparatorItem) {
+            // Separators don't get indicators or checkboxes, just display their text
+            asb.append(item.getText());
+            return asb.toAttributedString();
+        }
+
         if (!item.isDisabled()) {
-            // Selection indicator
-            if (isSelected) {
+            // Selection indicator (only for selectable items)
+            if (isSelected && item.isSelectable()) {
                 asb.styled(config.style(PrompterConfig.CURSOR), config.indicator());
             } else {
                 fillIndicatorSpace(asb);
             }
             asb.append(" ");
 
-            // Checkbox state
-            asb.styled(
-                    config.style(PrompterConfig.BE),
-                    selectedIds.contains(item.getName()) ? config.checkedBox() : config.uncheckedBox());
+            // Checkbox state (only for selectable items)
+            if (item.isSelectable()) {
+                asb.styled(
+                        config.style(PrompterConfig.BE),
+                        selectedIds.contains(item.getName()) ? config.checkedBox() : config.uncheckedBox());
+            } else {
+                // Non-selectable items don't get checkboxes
+                fillCheckboxSpace(asb);
+            }
 
             // Item text
             asb.append(" ");
@@ -1815,15 +1844,6 @@ public class DefaultPrompter implements Prompter {
     }
 
     /**
-     * Fill space for checkbox alignment.
-     */
-    private void fillCheckboxSpace(AttributedStringBuilder asb) {
-        for (int i = 0; i < display.wcwidth(config.checkedBox()); i++) {
-            asb.append(" ");
-        }
-    }
-
-    /**
      * Bind keys for choice prompt operations.
      */
     private void bindChoiceKeys(KeyMap<ChoiceOperation> map) {
@@ -1909,12 +1929,12 @@ public class DefaultPrompter implements Prompter {
         int next;
         for (next = row + 1;
                 next - firstItemRow < itemsSize
-                        && items.get(next - firstItemRow).isDisabled();
+                        && !items.get(next - firstItemRow).isSelectable();
                 next++) {}
         if (next - firstItemRow >= itemsSize) {
             for (next = firstItemRow;
                     next - firstItemRow < itemsSize
-                            && items.get(next - firstItemRow).isDisabled();
+                            && !items.get(next - firstItemRow).isSelectable();
                     next++) {}
         }
         return next;
@@ -1927,11 +1947,11 @@ public class DefaultPrompter implements Prompter {
         int itemsSize = items.size();
         int prev;
         for (prev = row - 1;
-                prev - firstItemRow >= 0 && items.get(prev - firstItemRow).isDisabled();
+                prev - firstItemRow >= 0 && !items.get(prev - firstItemRow).isSelectable();
                 prev--) {}
         if (prev - firstItemRow < 0) {
             for (prev = firstItemRow + itemsSize - 1;
-                    prev - firstItemRow >= 0 && items.get(prev - firstItemRow).isDisabled();
+                    prev - firstItemRow >= 0 && !items.get(prev - firstItemRow).isSelectable();
                     prev--) {}
         }
         return prev;
@@ -2025,7 +2045,7 @@ public class DefaultPrompter implements Prompter {
         col = (col + 1) % columns;
 
         int newIndex = gridToIndex(row, col, items.size(), columns, lines, rowsFirst);
-        if (newIndex >= 0 && newIndex < items.size() && !items.get(newIndex).isDisabled()) {
+        if (newIndex >= 0 && newIndex < items.size() && items.get(newIndex).isSelectable()) {
             return firstItemRow + newIndex;
         }
 
@@ -2047,7 +2067,7 @@ public class DefaultPrompter implements Prompter {
         col = (col - 1 + columns) % columns;
 
         int newIndex = gridToIndex(row, col, items.size(), columns, lines, rowsFirst);
-        if (newIndex >= 0 && newIndex < items.size() && !items.get(newIndex).isDisabled()) {
+        if (newIndex >= 0 && newIndex < items.size() && items.get(newIndex).isSelectable()) {
             return firstItemRow + newIndex;
         }
 

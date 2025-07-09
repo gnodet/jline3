@@ -92,8 +92,8 @@ public class PromptDynamicExample {
         // Step 2: If we have name and product, create product-specific prompts
         if (previousResults.containsKey("name")
                 && previousResults.containsKey("product")
-                && !previousResults.containsKey("pizzatype")
-                && !previousResults.containsKey("hamburgertype")) {
+                && !previousResults.containsKey("pizzatext")
+                && !previousResults.containsKey("hamburgertext")) {
 
             String product = ((ListResult) previousResults.get("product")).getSelectedId();
             if ("pizza".equals(product)) {
@@ -104,8 +104,8 @@ public class PromptDynamicExample {
         }
 
         // Step 3: If we have product-specific results, create final prompts
-        if ((previousResults.containsKey("pizzatype") || previousResults.containsKey("hamburgertype"))
-                && !previousResults.containsKey("payment")) {
+        if ((previousResults.containsKey("topping") || previousResults.containsKey("ingredients"))
+                && !previousResults.containsKey("finaltext")) {
             return createFinalPrompts();
         }
 
@@ -139,6 +139,12 @@ public class PromptDynamicExample {
     private static List<? extends Prompt> createPizzaPrompts() {
         PromptBuilder builder = new DefaultPromptBuilder();
 
+        // Add text prompt like in the original BasicDynamic
+        builder.createText()
+                .name("pizzatext")
+                .text("Pizza time!")
+                .addPrompt();
+
         builder.createListPrompt()
                 .name("pizzatype")
                 .message("Which pizza do you want?")
@@ -156,14 +162,25 @@ public class PromptDynamicExample {
                 .add()
                 .addPrompt();
 
+        // Add separators like in the original BasicDynamic
         builder.createCheckboxPrompt()
                 .name("topping")
                 .message("Please select additional toppings:")
+                .newSeparator("standard toppings")
+                .add()
                 .newItem("cheese")
                 .text("Cheese")
                 .add()
                 .newItem("bacon")
                 .text("Bacon")
+                .add()
+                .newItem("onions")
+                .text("Onions")
+                .disabled(true)
+                .disabledText("Sorry. Out of stock.")
+                .add()
+                .newSeparator()
+                .text("special toppings")
                 .add()
                 .newItem("salami")
                 .text("Very hot salami")
@@ -171,6 +188,8 @@ public class PromptDynamicExample {
                 .add()
                 .newItem("salmon")
                 .text("Smoked Salmon")
+                .add()
+                .newSeparator("and our speciality...")
                 .add()
                 .newItem("special")
                 .text("Anchovies, and olives")
@@ -183,6 +202,12 @@ public class PromptDynamicExample {
 
     private static List<? extends Prompt> createHamburgerPrompts() {
         PromptBuilder builder = new DefaultPromptBuilder();
+
+        // Add text prompt like in the original BasicDynamic
+        builder.createText()
+                .name("hamburgertext")
+                .text("Hamburger time!")
+                .addPrompt();
 
         builder.createListPrompt()
                 .name("hamburgertype")
@@ -198,14 +223,25 @@ public class PromptDynamicExample {
                 .add()
                 .addPrompt();
 
+        // Add separators like in the original BasicDynamic
         builder.createCheckboxPrompt()
                 .name("ingredients")
                 .message("Please select additional ingredients:")
+                .newSeparator("standard ingredients")
+                .add()
                 .newItem("tomato")
                 .text("Tomato")
                 .add()
                 .newItem("lettuce")
                 .text("Lettuce")
+                .add()
+                .newItem("onions")
+                .text("Onions")
+                .disabled(true)
+                .disabledText("Sorry. Out of stock.")
+                .add()
+                .newSeparator()
+                .text("special ingredients")
                 .add()
                 .newItem("crispybacon")
                 .text("Crispy Bacon")
@@ -219,6 +255,13 @@ public class PromptDynamicExample {
     private static List<? extends Prompt> createFinalPrompts() {
         PromptBuilder builder = new DefaultPromptBuilder();
 
+        // Add styled text like in the original BasicDynamic
+        builder.createText()
+                .name("finaltext")
+                .text("###################\nFinalize your order\n###################")
+                .addPrompt();
+
+        // Add separators to payment options like in the original
         builder.createListPrompt()
                 .name("payment")
                 .message("How do you want to pay?")
@@ -230,6 +273,8 @@ public class PromptDynamicExample {
                 .add()
                 .newItem("master")
                 .text("Master Card")
+                .add()
+                .newSeparator("online payment")
                 .add()
                 .newItem("paypal")
                 .text("Paypal")

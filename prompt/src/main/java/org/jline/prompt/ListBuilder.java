@@ -107,4 +107,19 @@ public interface ListBuilder extends BaseBuilder<ListBuilder> {
      * @return this builder
      */
     ListBuilder showPageIndicator(boolean showPageIndicator);
+
+    /**
+     * Create a new separator with no text.
+     *
+     * @return a separator builder
+     */
+    ListSeparatorBuilder newSeparator();
+
+    /**
+     * Create a new separator with the given text.
+     *
+     * @param text the separator text
+     * @return a separator builder
+     */
+    ListSeparatorBuilder newSeparator(String text);
 }

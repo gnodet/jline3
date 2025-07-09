@@ -13,7 +13,9 @@ import java.util.List;
 
 import org.jline.prompt.ListBuilder;
 import org.jline.prompt.ListItem;
+import org.jline.prompt.ListSeparatorBuilder;
 import org.jline.prompt.PromptBuilder;
+import org.jline.prompt.SeparatorItem;
 
 /**
  * Default implementation of ListBuilder.
@@ -138,6 +140,25 @@ public class DefaultListBuilder implements ListBuilder {
     public ListBuilder showPageIndicator(boolean showPageIndicator) {
         this.showPageIndicator = showPageIndicator;
         return this;
+    }
+
+    @Override
+    public ListSeparatorBuilder newSeparator() {
+        return new DefaultListSeparatorBuilder(this);
+    }
+
+    @Override
+    public ListSeparatorBuilder newSeparator(String text) {
+        return new DefaultListSeparatorBuilder(this, text);
+    }
+
+    /**
+     * Add a separator item to the list.
+     *
+     * @param separatorItem the separator item to add
+     */
+    public void addSeparator(SeparatorItem separatorItem) {
+        items.add((ListItem) separatorItem);
     }
 
     /**
