@@ -8,6 +8,10 @@
  */
 package org.jline.prompt;
 
+import java.util.List;
+
+import org.jline.utils.AttributedString;
+
 /**
  * Interface for text prompts.
  * A text prompt displays text to the user without requiring input.
@@ -20,4 +24,12 @@ public interface TextPrompt extends Prompt {
      * @return the text
      */
     String getText();
+
+    /**
+     * Get the text lines as AttributedString list.
+     * This is used for adding to the header like console-ui's Text.getLines().
+     *
+     * @return the text lines
+     */
+    List<AttributedString> getLines();
 }

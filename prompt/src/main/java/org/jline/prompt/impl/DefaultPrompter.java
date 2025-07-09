@@ -22,9 +22,14 @@ import java.util.function.Function;
 import org.jline.keymap.BindingReader;
 import org.jline.keymap.KeyMap;
 import org.jline.prompt.*;
+import org.jline.reader.Candidate;
+import org.jline.reader.CompletingParsedLine;
+import org.jline.reader.CompletionMatcher;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.UserInterruptException;
+import org.jline.reader.impl.CompletionMatcherImpl;
+import org.jline.reader.impl.ReaderUtils;
 import org.jline.terminal.Attributes;
 import org.jline.terminal.Size;
 import org.jline.terminal.Terminal;
@@ -202,7 +207,8 @@ public class DefaultPrompter implements Prompter {
                     if (promptResult != null) {
                         // Remove the results of the previous prompt from the main result map
                         promptResult.forEach((k, v) -> resultMap.remove(k));
-                        header.remove(header.size() - 1);
+                        // Remove the previous result from header - need to handle TextPrompt specially
+                        removePreviousResult(promptResult);
                     }
                 } else {
                     // We remember the list of prompts and their results
@@ -250,7 +256,7 @@ public class DefaultPrompter implements Prompter {
             Prompt prompt = promptList.get(i);
             try {
                 if (backward) {
-                    removePreviousResult(prompt, resultMap);
+                    // Remove the previous result from resultMap - this is handled in the dynamic prompt method
                     backward = false;
                 }
 
@@ -278,9 +284,9 @@ public class DefaultPrompter implements Prompter {
 
                 // Add result to header for next prompt (like ConsolePrompt)
                 if (prompt instanceof TextPrompt) {
-                    // For text prompts, add the text content to header
+                    // For text prompts, add all lines to header like console-ui Text.getLines()
                     TextPrompt textPrompt = (TextPrompt) prompt;
-                    this.header.add(new AttributedString(textPrompt.getText()));
+                    this.header.addAll(textPrompt.getLines());
                 } else {
                     String resp = result.getResult();
                     if (result instanceof ConfirmResult) {
@@ -324,11 +330,24 @@ public class DefaultPrompter implements Prompter {
     /**
      * Remove previous result when going backward (like ConsolePrompt).
      */
-    private void removePreviousResult(Prompt prompt, Map<String, PromptResult<? extends Prompt>> resultMap) {
-        resultMap.remove(prompt.getName());
-        // Also remove from header if it was added
-        if (!this.header.isEmpty()) {
-            this.header.remove(this.header.size() - 1);
+    private void removePreviousResult(Map<String, PromptResult<? extends Prompt>> promptResult) {
+        // Find the prompt that was executed to determine how many lines to remove
+        for (PromptResult<? extends Prompt> result : promptResult.values()) {
+            Prompt prompt = result.getPrompt();
+            if (prompt instanceof TextPrompt) {
+                // For text prompts, remove all lines that were added
+                TextPrompt textPrompt = (TextPrompt) prompt;
+                int linesToRemove = textPrompt.getLines().size();
+                for (int i = 0; i < linesToRemove && !this.header.isEmpty(); i++) {
+                    this.header.remove(this.header.size() - 1);
+                }
+            } else {
+                // For other prompts, remove just one line
+                if (!this.header.isEmpty()) {
+                    this.header.remove(this.header.size() - 1);
+                }
+            }
+            break; // Only process the first result since we're going back one step
         }
     }
 
@@ -391,12 +410,6 @@ public class DefaultPrompter implements Prompter {
     private InputResult executeInputPrompt(List<AttributedString> header, InputPrompt prompt)
             throws IOException, UserInterruptException {
 
-        // Build display lines including header + prompt message
-        List<AttributedString> displayLines = new ArrayList<>();
-        if (header != null) {
-            displayLines.addAll(header);
-        }
-
         // Create prompt message using proper styling like ConsolePrompt
         AttributedStringBuilder asb = createMessage(prompt.getMessage(), null);
 
@@ -404,9 +417,8 @@ public class DefaultPrompter implements Prompter {
         if (defaultValue != null) {
             asb.append("(").append(defaultValue).append(") ");
         }
-        displayLines.add(asb.toAttributedString());
 
-        // Copy ConsolePrompt's exact behavior: use Display system with direct character input
+        // Copy ConsolePrompt's exact behavior: use Display system with completion support
         size.copy(terminal.getSize());
 
         // Set up key bindings like ConsolePrompt
@@ -419,24 +431,38 @@ public class DefaultPrompter implements Prompter {
         int startColumn = asb.columnLength();
         int column = startColumn;
 
+        // Completion support like AbstractPrompt
+        List<Candidate> matches = new ArrayList<>();
+        CompletionMatcher completionMatcher = new CompletionMatcherImpl();
+        boolean tabCompletion = prompt.getCompleter() != null && reader != null;
+
         while (true) {
-            // Build display lines exactly like ConsolePrompt: header + message + buffer
-            List<AttributedString> out = new ArrayList<>();
-            if (header != null) {
-                out.addAll(header);
+            // Handle completion like AbstractPrompt
+            boolean displayCandidates = true;
+            if (tabCompletion) {
+                List<Candidate> possible = new ArrayList<>();
+                CompletingWord completingWord = new CompletingWord(buffer.toString());
+                prompt.getCompleter().complete(reader, completingWord, possible);
+                Map<LineReader.Option, Boolean> options = new HashMap<>();
+                if (reader != null) {
+                    for (LineReader.Option option : LineReader.Option.values()) {
+                        options.put(option, reader.isSet(option));
+                    }
+                }
+                completionMatcher.compile(options, false, completingWord, false, 0, null);
+                matches = completionMatcher.matches(possible).stream()
+                        .sorted(java.util.Comparator.naturalOrder())
+                        .collect(java.util.stream.Collectors.toList());
+                if (matches.size() > ReaderUtils.getInt(reader, LineReader.MENU_LIST_MAX, 10)) {
+                    displayCandidates = false;
+                }
             }
 
-            // Create message line with current input buffer
-            AttributedStringBuilder messageBuilder = new AttributedStringBuilder();
-            messageBuilder.append(asb);
-            if (mask != null) {
-                messageBuilder.append(displayBuffer.toString());
-            } else {
-                messageBuilder.append(buffer.toString());
-            }
-            out.add(messageBuilder.toAttributedString());
+            // Build display with completion candidates like AbstractPrompt
+            List<AttributedString> out = buildInputDisplay(
+                    header, asb, buffer, displayBuffer, mask, matches, displayCandidates, startColumn);
 
-            // Update display exactly like ConsolePrompt
+            // Update display
             display.resize(size.getRows(), size.getColumns());
             int cursorRow = out.size() - 1;
             display.update(out, size.cursorPos(cursorRow, column));
@@ -446,23 +472,58 @@ public class DefaultPrompter implements Prompter {
             switch (op) {
                 case INSERT:
                     String ch = bindingReader.getLastBinding();
-                    buffer.append(ch);
+                    buffer.insert(column - startColumn, ch);
                     if (mask != null) {
-                        displayBuffer.append(mask);
+                        displayBuffer.insert(column - startColumn, mask);
                     } else {
-                        displayBuffer.append(ch);
+                        displayBuffer.insert(column - startColumn, ch);
                     }
                     column++;
                     break;
 
                 case BACKSPACE:
-                    if (buffer.length() > 0) {
-                        buffer.deleteCharAt(buffer.length() - 1);
-                        if (displayBuffer.length() > 0) {
-                            displayBuffer.deleteCharAt(displayBuffer.length() - 1);
-                        }
-                        if (column > startColumn) {
-                            column--;
+                    if (column > startColumn) {
+                        buffer.deleteCharAt(column - startColumn - 1);
+                        displayBuffer.deleteCharAt(column - startColumn - 1);
+                        column--;
+                    }
+                    break;
+
+                case LEFT:
+                    if (column > startColumn) {
+                        column--;
+                    }
+                    break;
+
+                case RIGHT:
+                    if (column < startColumn + displayBuffer.length()) {
+                        column++;
+                    }
+                    break;
+
+                case BEGINNING_OF_LINE:
+                    column = startColumn;
+                    break;
+
+                case END_OF_LINE:
+                    column = startColumn + displayBuffer.length();
+                    break;
+
+                case SELECT_CANDIDATE:
+                    if (tabCompletion && matches.size() < ReaderUtils.getInt(reader, LineReader.LIST_MAX, 50)) {
+                        String selected = selectCandidate(buffer.toString(), matches);
+                        if (selected != null) {
+                            buffer.setLength(0);
+                            buffer.append(selected);
+                            displayBuffer.setLength(0);
+                            if (mask == null) {
+                                displayBuffer.append(selected);
+                            } else {
+                                for (int i = 0; i < selected.length(); i++) {
+                                    displayBuffer.append(mask);
+                                }
+                            }
+                            column = startColumn + displayBuffer.length();
                         }
                     }
                     break;
@@ -480,6 +541,146 @@ public class DefaultPrompter implements Prompter {
                 case CANCEL:
                     throw new UserInterruptException("User cancelled");
             }
+        }
+    }
+
+    /**
+     * Build input display with completion candidates like AbstractPrompt.
+     */
+    private List<AttributedString> buildInputDisplay(
+            List<AttributedString> header,
+            AttributedStringBuilder messageBuilder,
+            StringBuilder buffer,
+            StringBuilder displayBuffer,
+            Character mask,
+            List<Candidate> candidates,
+            boolean displayCandidates,
+            int startColumn) {
+
+        List<AttributedString> out = new ArrayList<>();
+        if (header != null) {
+            out.addAll(header);
+        }
+
+        // Create message line with current input buffer
+        AttributedStringBuilder asb = new AttributedStringBuilder();
+        asb.append(messageBuilder);
+        if (mask != null) {
+            asb.append(displayBuffer.toString());
+        } else {
+            asb.append(buffer.toString());
+        }
+        out.add(asb.toAttributedString());
+
+        // Add completion candidates if available
+        if (displayCandidates && !candidates.isEmpty()) {
+            out.addAll(buildCandidatesDisplay(candidates, startColumn + asb.columnLength()));
+        }
+
+        return out;
+    }
+
+    /**
+     * Build candidates display like AbstractPrompt.
+     */
+    private List<AttributedString> buildCandidatesDisplay(List<Candidate> candidates, int listStart) {
+        List<AttributedString> out = new ArrayList<>();
+
+        int width = Math.max(
+                candidates.stream()
+                        .map(Candidate::displ)
+                        .mapToInt(display::wcwidth)
+                        .max()
+                        .orElse(20),
+                20);
+
+        for (Candidate c : candidates) {
+            AttributedStringBuilder asb = new AttributedStringBuilder();
+            AttributedStringBuilder tmp = new AttributedStringBuilder();
+            tmp.ansiAppend(c.displ());
+            asb.style(tmp.styleAt(0));
+            asb.append(AttributedString.stripAnsi(c.displ()));
+            int cl = asb.columnLength();
+            for (int k = cl; k < width; k++) {
+                asb.append(" ");
+            }
+            AttributedStringBuilder asb2 = new AttributedStringBuilder();
+            asb2.tabs(listStart);
+            asb2.append("\t");
+            asb2.style(config.style(".cb"));
+            asb2.append(asb).append(" ");
+            out.add(asb2.toAttributedString());
+        }
+        return out;
+    }
+
+    /**
+     * Select candidate like AbstractPrompt.
+     */
+    private String selectCandidate(String buffer, List<Candidate> candidates) {
+        if (candidates.isEmpty()) {
+            return buffer;
+        } else if (candidates.size() == 1) {
+            return candidates.get(0).value();
+        }
+        // For now, just return the first candidate
+        // TODO: Implement interactive candidate selection
+        return candidates.get(0).value();
+    }
+
+    /**
+     * CompletingWord implementation like AbstractPrompt.
+     */
+    private static class CompletingWord implements CompletingParsedLine {
+        private final String word;
+
+        public CompletingWord(String word) {
+            this.word = word;
+        }
+
+        @Override
+        public CharSequence escape(CharSequence candidate, boolean complete) {
+            return null;
+        }
+
+        @Override
+        public int rawWordCursor() {
+            return word.length();
+        }
+
+        @Override
+        public int rawWordLength() {
+            return word.length();
+        }
+
+        @Override
+        public String word() {
+            return word;
+        }
+
+        @Override
+        public int wordCursor() {
+            return word.length();
+        }
+
+        @Override
+        public int wordIndex() {
+            return 0;
+        }
+
+        @Override
+        public List<String> words() {
+            return java.util.Collections.singletonList(word);
+        }
+
+        @Override
+        public String line() {
+            return word;
+        }
+
+        @Override
+        public int cursor() {
+            return word.length();
         }
     }
 
@@ -858,14 +1059,14 @@ public class DefaultPrompter implements Prompter {
     private PromptResult<TextPrompt> executeTextPrompt(List<AttributedString> header, TextPrompt prompt)
             throws IOException, UserInterruptException {
 
-        // Build display lines including header + text
+        // Build display lines including header + text lines
         List<AttributedString> displayLines = new ArrayList<>();
         if (header != null) {
             displayLines.addAll(header);
         }
 
-        // Add text content
-        displayLines.add(new AttributedString(prompt.getText()));
+        // Add text content lines like console-ui Text.getLines()
+        displayLines.addAll(prompt.getLines());
 
         // Update size and display using Display system
         size.copy(terminal.getSize());
