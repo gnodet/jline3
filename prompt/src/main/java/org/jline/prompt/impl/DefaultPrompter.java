@@ -397,17 +397,11 @@ public class DefaultPrompter implements Prompter {
             displayLines.addAll(header);
         }
 
-        // Create prompt message like ConsolePrompt: "? " + message + " " + "(defaultValue) "
-        AttributedStringBuilder asb = new AttributedStringBuilder();
-        asb.style(AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN));
-        asb.append("? ");
-        asb.style(AttributedStyle.DEFAULT.bold());
-        asb.append(prompt.getMessage());
-        asb.append(" ");
+        // Create prompt message using proper styling like ConsolePrompt
+        AttributedStringBuilder asb = createMessage(prompt.getMessage(), null);
 
         String defaultValue = prompt.getDefaultValue();
         if (defaultValue != null) {
-            asb.style(AttributedStyle.DEFAULT);
             asb.append("(").append(defaultValue).append(") ");
         }
         displayLines.add(asb.toAttributedString());
@@ -707,22 +701,13 @@ public class DefaultPrompter implements Prompter {
     private ChoiceResult executeChoicePrompt(List<AttributedString> header, ChoicePrompt prompt)
             throws IOException, UserInterruptException {
 
-        // TODO: Convert choice prompt to use Display system properly
-        // For now, just display header using Display system
-        if (header != null && !header.isEmpty()) {
-            size.copy(terminal.getSize());
-            display.resize(size.getRows(), size.getColumns());
-            display.update(header, -1);
-        }
-        displayPromptMessage(prompt.getMessage());
+        size.copy(terminal.getSize());
+        display.resize(size.getRows(), size.getColumns());
 
         List<ChoiceItem> items = prompt.getItems();
         if (items.isEmpty()) {
             return new DefaultChoiceResult("", prompt);
         }
-
-        // Display available choices with their keys
-        displayChoiceItems(items);
 
         // Find default choice if any
         ChoiceItem defaultChoice = null;
@@ -733,8 +718,25 @@ public class DefaultPrompter implements Prompter {
             }
         }
 
-        terminal.writer().print("Choice: ");
-        terminal.flush();
+        // Build initial display with header, message, choices, and prompt
+        List<AttributedString> out = new ArrayList<>();
+        if (header != null) {
+            out.addAll(header);
+        }
+
+        // Add message line
+        AttributedStringBuilder messageBuilder = createMessage(prompt.getMessage(), null);
+        out.add(messageBuilder.toAttributedString());
+
+        // Add choice items
+        out.addAll(buildChoiceItemsDisplay(items));
+
+        // Add choice prompt line
+        AttributedStringBuilder choiceBuilder = new AttributedStringBuilder();
+        choiceBuilder.styled(config.style(PrompterConfig.PR), "Choice: ");
+        out.add(choiceBuilder.toAttributedString());
+
+        display.update(out, out.size() - 1);
 
         // Set up key bindings
         KeyMap<ChoiceOperation> keyMap = new KeyMap<>();
@@ -752,10 +754,8 @@ public class DefaultPrompter implements Prompter {
                         if (item.isSelectable()
                                 && item.getKey() != null
                                 && item.getKey().toString().equalsIgnoreCase(ch)) {
-                            // Found matching choice
-                            terminal.writer().print(ch);
-                            terminal.writer().println();
-                            terminal.flush();
+                            // Found matching choice - update display with answer
+                            updateChoiceDisplay(out, ch);
                             return new DefaultChoiceResult(item.getName(), prompt);
                         }
                     }
@@ -764,12 +764,10 @@ public class DefaultPrompter implements Prompter {
                 case EXIT:
                     // Use default choice if available
                     if (defaultChoice != null) {
-                        terminal.writer()
-                                .println(
-                                        defaultChoice.getKey() != null
-                                                ? defaultChoice.getKey().toString()
-                                                : "");
-                        terminal.flush();
+                        String defaultKey = defaultChoice.getKey() != null
+                                ? defaultChoice.getKey().toString()
+                                : "";
+                        updateChoiceDisplay(out, defaultKey);
                         return new DefaultChoiceResult(defaultChoice.getName(), prompt);
                     }
                     // No default, continue waiting for input
@@ -777,11 +775,23 @@ public class DefaultPrompter implements Prompter {
                 case ESCAPE:
                     return null; // Go back to previous prompt
                 case CANCEL:
-                    terminal.writer().println();
-                    terminal.flush();
                     throw new UserInterruptException("User cancelled");
             }
         }
+    }
+
+    /**
+     * Update choice display with the selected answer.
+     */
+    private void updateChoiceDisplay(List<AttributedString> out, String answer) {
+        // Update the last line (choice prompt) with the answer
+        AttributedStringBuilder choiceBuilder = new AttributedStringBuilder();
+        choiceBuilder.styled(config.style(PrompterConfig.PR), "Choice: ");
+        choiceBuilder.styled(config.style(PrompterConfig.AN), answer);
+
+        // Replace the last line with the updated one
+        out.set(out.size() - 1, choiceBuilder.toAttributedString());
+        display.update(out, -1);
     }
 
     private ConfirmResult executeConfirmPrompt(List<AttributedString> header, ConfirmPrompt prompt)
@@ -794,13 +804,9 @@ public class DefaultPrompter implements Prompter {
         KeyMap<ConfirmOperation> keyMap = new KeyMap<>();
         bindConfirmKeys(keyMap);
 
-        // Create prompt message like ConsolePrompt
-        AttributedStringBuilder asb = new AttributedStringBuilder();
-        asb.style(AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN));
-        asb.append("? ");
-        asb.style(AttributedStyle.DEFAULT.bold());
-        asb.append(prompt.getMessage());
-        asb.append(" (y/N) ");
+        // Create prompt message using proper styling like ConsolePrompt
+        AttributedStringBuilder asb = createMessage(prompt.getMessage(), null);
+        asb.append("(y/N) ");
 
         ConfirmResult.ConfirmationValue confirm = ConfirmResult.ConfirmationValue.NO; // Default
         StringBuilder buffer = new StringBuilder();
@@ -1002,16 +1008,16 @@ public class DefaultPrompter implements Prompter {
             fillIndicatorSpace(asb);
             asb.append(" ").append(key).append(item.getText());
         } else {
-            // Disabled item
+            // Disabled item - use proper styling
             fillIndicatorSpace(asb);
             asb.append(" ").append(key);
             if (item.isDisabled()) {
-                asb.append(item.getDisabledText())
+                asb.styled(config.style(PrompterConfig.BD), item.getDisabledText())
                         .append(" (")
-                        .append(item.getDisabledText())
+                        .styled(config.style(PrompterConfig.BD), item.getDisabledText())
                         .append(")");
             } else {
-                asb.append(item.getText());
+                asb.styled(config.style(PrompterConfig.BD), item.getText());
             }
         }
 
@@ -1043,7 +1049,7 @@ public class DefaultPrompter implements Prompter {
 
                     if (isSelected) {
                         itemBuilder
-                                .append(config.indicator())
+                                .styled(config.style(PrompterConfig.CURSOR), config.indicator())
                                 .style(AttributedStyle.DEFAULT.inverse())
                                 .append(" ")
                                 .append(key)
@@ -1056,7 +1062,7 @@ public class DefaultPrompter implements Prompter {
                         fillIndicatorSpace(itemBuilder);
                         itemBuilder.append(" ").append(key);
                         if (item.isDisabled()) {
-                            itemBuilder.append(item.getDisabledText());
+                            itemBuilder.styled(config.style(PrompterConfig.BD), item.getDisabledText());
                         } else {
                             itemBuilder.append(item.getText());
                         }
@@ -1091,7 +1097,7 @@ public class DefaultPrompter implements Prompter {
      * Fill space for indicator alignment.
      */
     private AttributedStringBuilder fillIndicatorSpace(AttributedStringBuilder asb) {
-        for (int i = 0; i < config.indicator().length(); i++) {
+        for (int i = 0; i < display.wcwidth(config.indicator()); i++) {
             asb.append(" ");
         }
         return asb;
@@ -1240,7 +1246,7 @@ public class DefaultPrompter implements Prompter {
                         // Selection indicator
                         if (isSelected) {
                             itemBuilder
-                                    .append(config.indicator())
+                                    .styled(config.style(PrompterConfig.CURSOR), config.indicator())
                                     .style(AttributedStyle.DEFAULT)
                                     .append(" ");
                         } else {
@@ -1249,16 +1255,16 @@ public class DefaultPrompter implements Prompter {
 
                         // Checkbox state
                         if (selectedIds.contains(item.getName())) {
-                            itemBuilder.append(config.checkedBox());
+                            itemBuilder.styled(config.style(PrompterConfig.BE), config.checkedBox());
                         } else {
-                            itemBuilder.append(config.uncheckedBox());
+                            itemBuilder.styled(config.style(PrompterConfig.BE), config.uncheckedBox());
                         }
                     } else {
                         // Disabled item
                         fillIndicatorSpace(itemBuilder);
                         itemBuilder.append(" ");
                         if (item.isDisabled()) {
-                            itemBuilder.append(config.unavailable());
+                            itemBuilder.styled(config.style(PrompterConfig.BD), config.unavailable());
                         } else {
                             fillCheckboxSpace(itemBuilder);
                         }
@@ -1299,7 +1305,7 @@ public class DefaultPrompter implements Prompter {
      * Fill space for checkbox alignment.
      */
     private void fillCheckboxSpace(AttributedStringBuilder asb) {
-        for (int i = 0; i < config.checkedBox().length(); i++) {
+        for (int i = 0; i < display.wcwidth(config.checkedBox()); i++) {
             asb.append(" ");
         }
     }
@@ -1319,23 +1325,27 @@ public class DefaultPrompter implements Prompter {
     }
 
     /**
-     * Display choice items with their keys.
+     * Build choice items display lines with proper styling.
      */
-    private void displayChoiceItems(List<ChoiceItem> items) {
-        terminal.writer().println();
+    private List<AttributedString> buildChoiceItemsDisplay(List<ChoiceItem> items) {
+        List<AttributedString> out = new ArrayList<>();
+        out.add(AttributedString.EMPTY); // Empty line before choices
+
         for (ChoiceItem item : items) {
             if (item.isSelectable()) {
-                terminal.writer().print("  ");
+                AttributedStringBuilder asb = new AttributedStringBuilder();
+                asb.append("  ");
                 if (item.getKey() != null && item.getKey() != ' ') {
-                    terminal.writer().print(item.getKey() + ") ");
+                    asb.styled(config.style(PrompterConfig.CURSOR), item.getKey() + ") ");
                 }
-                terminal.writer().print(item.getText());
+                asb.append(item.getText());
                 if (item.isDefaultChoice()) {
-                    terminal.writer().print(" (default)");
+                    asb.styled(config.style(PrompterConfig.AN), " (default)");
                 }
-                terminal.writer().println();
+                out.add(asb.toAttributedString());
             }
         }
+        return out;
     }
 
     /**
@@ -1444,10 +1454,9 @@ public class DefaultPrompter implements Prompter {
         }
 
         // Add space for indicator and checkbox symbols
-        maxWidth += config.indicator().length() + 1; // indicator + space
+        maxWidth += display.wcwidth(config.indicator()) + 1; // indicator + space
         if (items.get(0) instanceof CheckboxItem) {
-            maxWidth +=
-                    Math.max(display.wcwidth(config.checkedBox()), display.wcwidth(config.uncheckedBox()));
+            maxWidth += Math.max(display.wcwidth(config.checkedBox()), display.wcwidth(config.uncheckedBox()));
         }
 
         // Calculate how many columns fit
