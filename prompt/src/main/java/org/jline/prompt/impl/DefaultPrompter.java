@@ -998,7 +998,7 @@ public class DefaultPrompter implements Prompter {
         // Add selection indicator and key if available
         String key = item instanceof ChoiceItem ? ((ChoiceItem) item).getKey() + " - " : "";
         if (isSelected) {
-            asb.append(config.indicator())
+            asb.append(config.indicatorAttributed())
                     .style(AttributedStyle.DEFAULT.inverse())
                     .append(" ")
                     .append(key)
@@ -1048,7 +1048,7 @@ public class DefaultPrompter implements Prompter {
 
                     if (isSelected) {
                         itemBuilder
-                                .append(config.indicator())
+                                .append(config.indicatorAttributed())
                                 .style(AttributedStyle.DEFAULT.inverse())
                                 .append(" ")
                                 .append(key)
@@ -1096,7 +1096,7 @@ public class DefaultPrompter implements Prompter {
      * Fill space for indicator alignment.
      */
     private AttributedStringBuilder fillIndicatorSpace(AttributedStringBuilder asb) {
-        for (int i = 0; i < config.indicator().length(); i++) {
+        for (int i = 0; i < config.indicatorAttributed().length(); i++) {
             asb.append(" ");
         }
         return asb;
@@ -1186,23 +1186,25 @@ public class DefaultPrompter implements Prompter {
         if (item.isSelectable()) {
             // Selection indicator
             if (isSelected) {
-                asb.append(config.indicator()).style(AttributedStyle.DEFAULT).append(" ");
+                asb.append(config.indicatorAttributed())
+                        .style(AttributedStyle.DEFAULT)
+                        .append(" ");
             } else {
                 fillIndicatorSpace(asb).append(" ");
             }
 
             // Checkbox state
             if (selectedIds.contains(item.getName())) {
-                asb.append(config.checkedBox());
+                asb.append(config.checkedBoxAttributed());
             } else {
-                asb.append(config.uncheckedBox());
+                asb.append(config.uncheckedBoxAttributed());
             }
         } else {
             // Disabled item
             fillIndicatorSpace(asb);
             asb.append(" ");
             if (item.isDisabled()) {
-                asb.append(config.unavailable());
+                asb.append(config.unavailableAttributed());
             } else {
                 fillCheckboxSpace(asb);
             }
@@ -1244,7 +1246,7 @@ public class DefaultPrompter implements Prompter {
                         // Selection indicator
                         if (isSelected) {
                             itemBuilder
-                                    .append(config.indicator())
+                                    .append(config.indicatorAttributed())
                                     .style(AttributedStyle.DEFAULT)
                                     .append(" ");
                         } else {
@@ -1253,16 +1255,16 @@ public class DefaultPrompter implements Prompter {
 
                         // Checkbox state
                         if (selectedIds.contains(item.getName())) {
-                            itemBuilder.append(config.checkedBox());
+                            itemBuilder.append(config.checkedBoxAttributed());
                         } else {
-                            itemBuilder.append(config.uncheckedBox());
+                            itemBuilder.append(config.uncheckedBoxAttributed());
                         }
                     } else {
                         // Disabled item
                         fillIndicatorSpace(itemBuilder);
                         itemBuilder.append(" ");
                         if (item.isDisabled()) {
-                            itemBuilder.append(config.unavailable());
+                            itemBuilder.append(config.unavailableAttributed());
                         } else {
                             fillCheckboxSpace(itemBuilder);
                         }
@@ -1303,7 +1305,7 @@ public class DefaultPrompter implements Prompter {
      * Fill space for checkbox alignment.
      */
     private void fillCheckboxSpace(AttributedStringBuilder asb) {
-        for (int i = 0; i < config.checkedBox().length(); i++) {
+        for (int i = 0; i < config.checkedBoxAttributed().length(); i++) {
             asb.append(" ");
         }
     }
@@ -1448,10 +1450,11 @@ public class DefaultPrompter implements Prompter {
         }
 
         // Add space for indicator and checkbox symbols
-        maxWidth += config.indicator().length() + 1; // indicator + space
+        maxWidth += config.indicatorAttributed().length() + 1; // indicator + space
         if (items.get(0) instanceof CheckboxItem) {
-            maxWidth +=
-                    Math.max(config.checkedBox().length(), config.uncheckedBox().length());
+            maxWidth += Math.max(
+                    config.checkedBoxAttributed().length(),
+                    config.uncheckedBoxAttributed().length());
         }
 
         // Calculate how many columns fit

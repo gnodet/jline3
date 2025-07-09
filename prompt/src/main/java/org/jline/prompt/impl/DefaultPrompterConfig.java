@@ -9,7 +9,10 @@
 package org.jline.prompt.impl;
 
 import org.jline.prompt.PrompterConfig;
+import org.jline.utils.AttributedString;
+import org.jline.utils.AttributedStringBuilder;
 import org.jline.utils.OSUtils;
+import org.jline.utils.StyleResolver;
 
 /**
  * Default implementation of PrompterConfig interface.
@@ -21,6 +24,11 @@ public class DefaultPrompterConfig implements PrompterConfig {
     private final String checkedBox;
     private final String unavailable;
     private final boolean cancellableFirstPrompt;
+    private final StyleResolver styleResolver;
+    private final AttributedString indicatorAttributed;
+    private final AttributedString uncheckedBoxAttributed;
+    private final AttributedString checkedBoxAttributed;
+    private final AttributedString unavailableAttributed;
 
     /**
      * Create a default configuration with sensible defaults.
@@ -31,7 +39,8 @@ public class DefaultPrompterConfig implements PrompterConfig {
                 OSUtils.IS_WINDOWS ? "o" : "◯",
                 OSUtils.IS_WINDOWS ? "x" : "◉",
                 OSUtils.IS_WINDOWS ? "-" : "⊝",
-                false);
+                false,
+                null);
     }
 
     /**
@@ -43,11 +52,41 @@ public class DefaultPrompterConfig implements PrompterConfig {
             String checkedBox,
             String unavailable,
             boolean cancellableFirstPrompt) {
+        this(indicator, uncheckedBox, checkedBox, unavailable, cancellableFirstPrompt, null);
+    }
+
+    /**
+     * Create a configuration with specific values and style resolver.
+     */
+    public DefaultPrompterConfig(
+            String indicator,
+            String uncheckedBox,
+            String checkedBox,
+            String unavailable,
+            boolean cancellableFirstPrompt,
+            StyleResolver styleResolver) {
         this.indicator = indicator;
         this.uncheckedBox = uncheckedBox;
         this.checkedBox = checkedBox;
         this.unavailable = unavailable;
         this.cancellableFirstPrompt = cancellableFirstPrompt;
+        this.styleResolver = styleResolver;
+
+        // Create AttributedString versions with styling
+        this.indicatorAttributed = toAttributedString(styleResolver, indicator, ".cu");
+        this.uncheckedBoxAttributed = toAttributedString(styleResolver, uncheckedBox, ".be");
+        this.checkedBoxAttributed = toAttributedString(styleResolver, checkedBox, ".be");
+        this.unavailableAttributed = toAttributedString(styleResolver, unavailable, ".bd");
+    }
+
+    private static AttributedString toAttributedString(StyleResolver resolver, String string, String styleKey) {
+        if (resolver == null) {
+            return new AttributedString(string);
+        }
+        AttributedStringBuilder asb = new AttributedStringBuilder();
+        asb.style(resolver.resolve(styleKey));
+        asb.append(string);
+        return asb.toAttributedString();
     }
 
     @Override
@@ -73,5 +112,30 @@ public class DefaultPrompterConfig implements PrompterConfig {
     @Override
     public boolean cancellableFirstPrompt() {
         return cancellableFirstPrompt;
+    }
+
+    @Override
+    public AttributedString indicatorAttributed() {
+        return indicatorAttributed;
+    }
+
+    @Override
+    public AttributedString uncheckedBoxAttributed() {
+        return uncheckedBoxAttributed;
+    }
+
+    @Override
+    public AttributedString checkedBoxAttributed() {
+        return checkedBoxAttributed;
+    }
+
+    @Override
+    public AttributedString unavailableAttributed() {
+        return unavailableAttributed;
+    }
+
+    @Override
+    public StyleResolver styleResolver() {
+        return styleResolver;
     }
 }
