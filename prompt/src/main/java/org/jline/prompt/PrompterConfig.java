@@ -147,6 +147,8 @@ public interface PrompterConfig {
     String AN = ".an";
     String BE = ".be";
     String BD = ".bd";
+    String SE = ".se";
+    String CB = ".cb";
 
     default AttributedStyle style(String style) {
         return styleResolver().resolve(style);

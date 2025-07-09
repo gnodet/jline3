@@ -1000,7 +1000,7 @@ public class DefaultPrompter implements Prompter {
         String key = item instanceof ChoiceItem ? ((ChoiceItem) item).getKey() + " - " : "";
         if (isSelected) {
             asb.styled(config.style(PrompterConfig.CURSOR), config.indicator())
-                    .style(AttributedStyle.DEFAULT.inverse())
+                    .style(config.style(PrompterConfig.SE))
                     .append(" ")
                     .append(key)
                     .append(item.getText());
