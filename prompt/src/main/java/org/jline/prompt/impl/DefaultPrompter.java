@@ -37,7 +37,6 @@ import org.jline.terminal.Size;
 import org.jline.terminal.Terminal;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStringBuilder;
-import org.jline.utils.AttributedStyle;
 import org.jline.utils.Display;
 
 import static org.jline.keymap.KeyMap.*;
@@ -71,14 +70,6 @@ public class DefaultPrompter implements Prompter {
 
     // First row where items start (after header and message)
     private int firstItemRow;
-
-    // Column layout support
-    private int columns = 1;
-    private int lines = 1;
-    private boolean rowsFirst = true; // true = row-first layout, false = column-first
-    private static final int MARGIN_BETWEEN_COLUMNS = 2;
-    private static final int MIN_ITEMS_FOR_MULTICOLUMN =
-            6; // Minimum items to enable multi-column layout (increased from 4)
 
     /**
      * Create a new DefaultPrompter with the given terminal.
@@ -121,8 +112,6 @@ public class DefaultPrompter implements Prompter {
     private enum ListOperation {
         FORWARD_ONE_LINE,
         BACKWARD_ONE_LINE,
-        FORWARD_ONE_COLUMN,
-        BACKWARD_ONE_COLUMN,
         INSERT,
         EXIT,
         CANCEL,
@@ -133,8 +122,6 @@ public class DefaultPrompter implements Prompter {
     private enum CheckboxOperation {
         FORWARD_ONE_LINE,
         BACKWARD_ONE_LINE,
-        FORWARD_ONE_COLUMN,
-        BACKWARD_ONE_COLUMN,
         TOGGLE,
         EXIT,
         CANCEL,
@@ -1080,15 +1067,12 @@ public class DefaultPrompter implements Prompter {
         firstItemRow = (header != null ? header.size() : 0) + 1; // Header + message line
         range = null;
 
-        // Calculate column layout
-        calculateColumnLayout(items);
-
         // Find first selectable item
         int selectRow = nextRow(firstItemRow - 1, firstItemRow, items);
 
         // Set up key bindings
         KeyMap<ListOperation> keyMap = new KeyMap<>();
-        bindListKeys(keyMap, columns > 1); // Only bind column navigation for multi-column layouts
+        bindListKeys(keyMap);
 
         // Interactive selection loop
         while (true) {
@@ -1105,12 +1089,7 @@ public class DefaultPrompter implements Prompter {
                 case BACKWARD_ONE_LINE:
                     selectRow = prevRow(selectRow, firstItemRow, items);
                     break;
-                case FORWARD_ONE_COLUMN:
-                    selectRow = nextColumn(selectRow, firstItemRow, items, columns, lines, rowsFirst);
-                    break;
-                case BACKWARD_ONE_COLUMN:
-                    selectRow = prevColumn(selectRow, firstItemRow, items, columns, lines, rowsFirst);
-                    break;
+
                 case INSERT:
                     // Handle character-based selection (if items have keys)
                     String ch = bindingReader.getLastBinding();
@@ -1164,15 +1143,12 @@ public class DefaultPrompter implements Prompter {
         firstItemRow = (header != null ? header.size() : 0) + 1; // Header + message line
         range = null;
 
-        // Calculate column layout
-        calculateColumnLayout(items);
-
         // Find first selectable item
         int selectRow = nextRow(firstItemRow - 1, firstItemRow, items);
 
         // Set up key bindings
         KeyMap<CheckboxOperation> keyMap = new KeyMap<>();
-        bindCheckboxKeys(keyMap, columns > 1); // Only bind column navigation for multi-column layouts
+        bindCheckboxKeys(keyMap);
 
         // Interactive selection loop
         while (true) {
@@ -1189,12 +1165,7 @@ public class DefaultPrompter implements Prompter {
                 case BACKWARD_ONE_LINE:
                     selectRow = prevRow(selectRow, firstItemRow, items);
                     break;
-                case FORWARD_ONE_COLUMN:
-                    selectRow = nextColumn(selectRow, firstItemRow, items, columns, lines, rowsFirst);
-                    break;
-                case BACKWARD_ONE_COLUMN:
-                    selectRow = prevColumn(selectRow, firstItemRow, items, columns, lines, rowsFirst);
-                    break;
+
                 case TOGGLE:
                     CheckboxItem currentItem = items.get(selectRow - firstItemRow);
                     if (!currentItem.isDisabled()) {
@@ -1444,7 +1415,7 @@ public class DefaultPrompter implements Prompter {
     /**
      * Bind keys for list prompt operations.
      */
-    private void bindListKeys(KeyMap<ListOperation> map, boolean multiColumn) {
+    private void bindListKeys(KeyMap<ListOperation> map) {
         // Bind printable characters to INSERT operation
         for (char i = 32; i < KEYMAP_LENGTH; i++) {
             map.bind(ListOperation.INSERT, Character.toString(i));
@@ -1452,12 +1423,6 @@ public class DefaultPrompter implements Prompter {
         // Bind navigation keys
         map.bind(ListOperation.FORWARD_ONE_LINE, "e", ctrl('E'), key(terminal, key_down));
         map.bind(ListOperation.BACKWARD_ONE_LINE, "y", ctrl('Y'), key(terminal, key_up));
-
-        // Only bind column navigation for multi-column layouts (like console-ui behavior)
-        if (multiColumn) {
-            map.bind(ListOperation.FORWARD_ONE_COLUMN, key(terminal, key_right));
-            map.bind(ListOperation.BACKWARD_ONE_COLUMN, key(terminal, key_left));
-        }
 
         // Bind action keys
         map.bind(ListOperation.EXIT, "\r");
@@ -1493,18 +1458,13 @@ public class DefaultPrompter implements Prompter {
         asb.append(message);
         out.add(asb.toAttributedString());
 
-        if (columns == 1) {
-            // Single column layout - use original logic with pagination
-            computeListRange(cursorRow, items.size(), prompt.getPageSize());
-            for (int i = range.first; i < range.last; i++) {
-                if (items.isEmpty() || i > items.size() - 1) {
-                    break;
-                }
-                out.add(buildSingleItemLine(items.get(i), i + firstItemRow == cursorRow));
+        // Single column layout with pagination
+        computeListRange(cursorRow, items.size(), prompt.getPageSize());
+        for (int i = range.first; i < range.last; i++) {
+            if (items.isEmpty() || i > items.size() - 1) {
+                break;
             }
-        } else {
-            // Multi-column layout
-            out.addAll(buildMultiColumnLines(items, cursorRow));
+            out.add(buildSingleItemLine(items.get(i), i + firstItemRow == cursorRow));
         }
 
         return out;
@@ -1552,75 +1512,6 @@ public class DefaultPrompter implements Prompter {
     }
 
     /**
-     * Build multi-column layout lines.
-     */
-    private List<AttributedString> buildMultiColumnLines(List<ListItem> items, int cursorRow) {
-        List<AttributedString> out = new ArrayList<>();
-
-        // Calculate column width
-        int terminalWidth = size.getColumns();
-        int columnWidth = (terminalWidth - (columns - 1) * MARGIN_BETWEEN_COLUMNS) / columns;
-
-        for (int row = 0; row < lines; row++) {
-            AttributedStringBuilder lineBuilder = new AttributedStringBuilder();
-
-            for (int col = 0; col < columns; col++) {
-                int index = gridToIndex(row, col, items.size());
-                if (index >= 0 && index < items.size()) {
-                    ListItem item = items.get(index);
-                    boolean isSelected = (index + firstItemRow) == cursorRow;
-
-                    // Build item text
-                    AttributedStringBuilder itemBuilder = new AttributedStringBuilder();
-                    String key = item instanceof ChoiceItem ? ((ChoiceItem) item).getKey() + " - " : "";
-
-                    if (isSelected) {
-                        itemBuilder
-                                .styled(config.style(PrompterConfig.CURSOR), config.indicator())
-                                .style(AttributedStyle.DEFAULT.inverse())
-                                .append(" ")
-                                .append(key)
-                                .append(item.getText());
-                    } else if (!item.isDisabled()) {
-                        fillIndicatorSpace(itemBuilder);
-                        itemBuilder.append(" ").append(key).append(item.getText());
-                    } else {
-                        // Disabled item
-                        fillIndicatorSpace(itemBuilder);
-                        itemBuilder.append(" ").append(key);
-                        if (item.isDisabled()) {
-                            itemBuilder.styled(config.style(PrompterConfig.BD), item.getDisabledText());
-                        } else {
-                            itemBuilder.append(item.getText());
-                        }
-                    }
-
-                    // Pad to column width
-                    String itemText = itemBuilder.toString();
-                    int itemLength = display.wcwidth(itemText);
-                    lineBuilder.append(itemText);
-
-                    // Add padding to reach column width
-                    for (int i = itemLength; i < columnWidth; i++) {
-                        lineBuilder.append(' ');
-                    }
-
-                    // Add margin between columns (except for last column)
-                    if (col < columns - 1) {
-                        for (int i = 0; i < MARGIN_BETWEEN_COLUMNS; i++) {
-                            lineBuilder.append(' ');
-                        }
-                    }
-                }
-            }
-
-            out.add(lineBuilder.toAttributedString());
-        }
-
-        return out;
-    }
-
-    /**
      * Fill space for indicator alignment.
      */
     private AttributedStringBuilder fillIndicatorSpace(AttributedStringBuilder asb) {
@@ -1643,16 +1534,10 @@ public class DefaultPrompter implements Prompter {
     /**
      * Bind keys for checkbox prompt operations.
      */
-    private void bindCheckboxKeys(KeyMap<CheckboxOperation> map, boolean multiColumn) {
+    private void bindCheckboxKeys(KeyMap<CheckboxOperation> map) {
         // Bind navigation keys
         map.bind(CheckboxOperation.FORWARD_ONE_LINE, "e", ctrl('E'), key(terminal, key_down));
         map.bind(CheckboxOperation.BACKWARD_ONE_LINE, "y", ctrl('Y'), key(terminal, key_up));
-
-        // Only bind column navigation for multi-column layouts (like console-ui behavior)
-        if (multiColumn) {
-            map.bind(CheckboxOperation.FORWARD_ONE_COLUMN, key(terminal, key_right));
-            map.bind(CheckboxOperation.BACKWARD_ONE_COLUMN, key(terminal, key_left));
-        }
 
         // Bind toggle key
         map.bind(CheckboxOperation.TOGGLE, " ");
@@ -1700,18 +1585,13 @@ public class DefaultPrompter implements Prompter {
         asb.append(message);
         out.add(asb.toAttributedString());
 
-        if (columns == 1) {
-            // Single column layout - use original logic with pagination
-            computeListRange(cursorRow, items.size(), prompt.getPageSize());
-            for (int i = range.first; i < range.last; i++) {
-                if (items.isEmpty() || i > items.size() - 1) {
-                    break;
-                }
-                out.add(buildSingleCheckboxLine(items.get(i), i + firstItemRow == cursorRow, selectedIds));
+        // Single column layout with pagination
+        computeListRange(cursorRow, items.size(), prompt.getPageSize());
+        for (int i = range.first; i < range.last; i++) {
+            if (items.isEmpty() || i > items.size() - 1) {
+                break;
             }
-        } else {
-            // Multi-column layout
-            out.addAll(buildMultiColumnCheckboxLines(items, cursorRow, selectedIds));
+            out.add(buildSingleCheckboxLine(items.get(i), i + firstItemRow == cursorRow, selectedIds));
         }
 
         return out;
@@ -1764,83 +1644,6 @@ public class DefaultPrompter implements Prompter {
         }
 
         return asb.toAttributedString();
-    }
-
-    /**
-     * Build multi-column checkbox layout lines.
-     */
-    private List<AttributedString> buildMultiColumnCheckboxLines(
-            List<CheckboxItem> items, int cursorRow, Set<String> selectedIds) {
-        List<AttributedString> out = new ArrayList<>();
-
-        // Calculate column width
-        int terminalWidth = size.getColumns();
-        int columnWidth = (terminalWidth - (columns - 1) * MARGIN_BETWEEN_COLUMNS) / columns;
-
-        for (int row = 0; row < lines; row++) {
-            AttributedStringBuilder lineBuilder = new AttributedStringBuilder();
-
-            for (int col = 0; col < columns; col++) {
-                int index = gridToIndex(row, col, items.size());
-                if (index >= 0 && index < items.size()) {
-                    CheckboxItem item = items.get(index);
-                    boolean isSelected = (index + firstItemRow) == cursorRow;
-
-                    // Build item text
-                    AttributedStringBuilder itemBuilder = new AttributedStringBuilder();
-
-                    if (!item.isDisabled()) {
-                        // Selection indicator
-                        if (isSelected) {
-                            itemBuilder.styled(config.style(PrompterConfig.CURSOR), config.indicator());
-                        } else {
-                            fillIndicatorSpace(itemBuilder);
-                        }
-                        itemBuilder.append(" ");
-
-                        // Checkbox state
-                        itemBuilder.styled(
-                                config.style(PrompterConfig.BE),
-                                selectedIds.contains(item.getName()) ? config.checkedBox() : config.uncheckedBox());
-
-                        // Item text
-                        itemBuilder.append(" ");
-                        itemBuilder.append(item.getText());
-                    } else {
-                        // Disabled item
-                        fillIndicatorSpace(itemBuilder);
-                        itemBuilder.append(" ");
-                        itemBuilder.style(config.style(PrompterConfig.BD));
-                        itemBuilder.append(config.unavailable());
-                        // Item text
-                        itemBuilder.append(" ");
-                        itemBuilder.append(item.getText());
-                        itemBuilder.append(" (").append(item.getDisabledText()).append(")");
-                    }
-
-                    // Pad to column width
-                    String itemText = itemBuilder.toString();
-                    int itemLength = display.wcwidth(itemText);
-                    lineBuilder.append(itemText);
-
-                    // Add padding to reach column width
-                    for (int i = itemLength; i < columnWidth; i++) {
-                        lineBuilder.append(' ');
-                    }
-
-                    // Add margin between columns (except for last column)
-                    if (col < columns - 1) {
-                        for (int i = 0; i < MARGIN_BETWEEN_COLUMNS; i++) {
-                            lineBuilder.append(' ');
-                        }
-                    }
-                }
-            }
-
-            out.add(lineBuilder.toAttributedString());
-        }
-
-        return out;
     }
 
     /**
@@ -1962,137 +1765,5 @@ public class DefaultPrompter implements Prompter {
      */
     private void resetDisplay() {
         size.copy(terminal.getSize());
-    }
-
-    /**
-     * Calculate column layout for items based on terminal width.
-     */
-    private void calculateColumnLayout(List<? extends PromptItem> items) {
-        if (items.isEmpty()) {
-            columns = 1;
-            lines = 1;
-            return;
-        }
-
-        // Use single column for small number of items (like console-ui behavior)
-        if (items.size() < MIN_ITEMS_FOR_MULTICOLUMN) {
-            columns = 1;
-            lines = items.size();
-            return;
-        }
-
-        // Calculate maximum item width
-        int maxWidth = 0;
-        for (PromptItem item : items) {
-            String text = item.getText();
-            if (item instanceof ChoiceItem) {
-                ChoiceItem choice = (ChoiceItem) item;
-                if (choice.getKey() != null) {
-                    text = choice.getKey() + " - " + text;
-                }
-            }
-            maxWidth = Math.max(maxWidth, display.wcwidth(text));
-        }
-
-        // Add space for indicator and checkbox symbols
-        maxWidth += display.wcwidth(config.indicator()) + 1; // indicator + space
-        if (items.get(0) instanceof CheckboxItem) {
-            maxWidth += Math.max(display.wcwidth(config.checkedBox()), display.wcwidth(config.uncheckedBox()));
-        }
-
-        // Calculate how many columns fit
-        int terminalWidth = size.getColumns();
-        columns = Math.max(1, terminalWidth / (maxWidth + MARGIN_BETWEEN_COLUMNS));
-
-        // Adjust if we have fewer items than columns
-        columns = Math.min(columns, items.size());
-
-        // Calculate lines needed
-        lines = (items.size() + columns - 1) / columns;
-
-        // Ensure we don't exceed available terminal height
-        int availableRows = size.getRows() - firstItemRow;
-        if (lines > availableRows && availableRows > 0) {
-            lines = availableRows;
-            columns = (items.size() + lines - 1) / lines;
-        }
-    }
-
-    /**
-     * Convert 2D grid position to linear item index.
-     */
-    private int gridToIndex(int row, int col, int totalItems) {
-        int index;
-        if (rowsFirst) {
-            index = row * columns + col;
-        } else {
-            index = col * lines + row;
-        }
-        return index < totalItems ? index : -1;
-    }
-
-    /**
-     * Navigate to next column in grid layout.
-     */
-    private static <T extends PromptItem> int nextColumn(
-            int currentRow, int firstItemRow, List<T> items, int columns, int lines, boolean rowsFirst) {
-        int currentIndex = currentRow - firstItemRow;
-        int[] grid = indexToGrid(currentIndex, columns, lines, rowsFirst);
-        int row = grid[0];
-        int col = grid[1];
-
-        // Move right
-        col = (col + 1) % columns;
-
-        int newIndex = gridToIndex(row, col, items.size(), columns, lines, rowsFirst);
-        if (newIndex >= 0 && newIndex < items.size() && items.get(newIndex).isSelectable()) {
-            return firstItemRow + newIndex;
-        }
-
-        // If target is not selectable, find next selectable item
-        return nextRow(currentRow, firstItemRow, items);
-    }
-
-    /**
-     * Navigate to previous column in grid layout.
-     */
-    private static <T extends PromptItem> int prevColumn(
-            int currentRow, int firstItemRow, List<T> items, int columns, int lines, boolean rowsFirst) {
-        int currentIndex = currentRow - firstItemRow;
-        int[] grid = indexToGrid(currentIndex, columns, lines, rowsFirst);
-        int row = grid[0];
-        int col = grid[1];
-
-        // Move left
-        col = (col - 1 + columns) % columns;
-
-        int newIndex = gridToIndex(row, col, items.size(), columns, lines, rowsFirst);
-        if (newIndex >= 0 && newIndex < items.size() && items.get(newIndex).isSelectable()) {
-            return firstItemRow + newIndex;
-        }
-
-        // If target is not selectable, find previous selectable item
-        return prevRow(currentRow, firstItemRow, items);
-    }
-
-    /**
-     * Helper methods for grid calculations.
-     */
-    private static int gridToIndex(int row, int col, int totalItems, int columns, int lines, boolean rowsFirst) {
-        int index;
-        if (rowsFirst) {
-            index = row * columns + col;
-        } else {
-            index = col * lines + row;
-        }
-        return index < totalItems ? index : -1;
-    }
-
-    private static int[] indexToGrid(int index, int columns, int lines, boolean rowsFirst) {
-        if (rowsFirst) {
-            return new int[] {index / columns, index % columns};
-        } else {
-            return new int[] {index % lines, index / lines};
-        }
     }
 }
