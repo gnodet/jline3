@@ -91,4 +91,20 @@ public interface ListBuilder extends BaseBuilder<ListBuilder> {
                 .disabledText(disabledText)
                 .add();
     }
+
+    /**
+     * Set the page size for pagination.
+     *
+     * @param pageSize the page size, or 0 for no pagination
+     * @return this builder
+     */
+    ListBuilder pageSize(int pageSize);
+
+    /**
+     * Set whether to show page indicators.
+     *
+     * @param showPageIndicator true to show page indicators
+     * @return this builder
+     */
+    ListBuilder showPageIndicator(boolean showPageIndicator);
 }

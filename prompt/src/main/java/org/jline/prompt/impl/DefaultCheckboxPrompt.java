@@ -21,14 +21,37 @@ import org.jline.prompt.CheckboxPrompt;
 public class DefaultCheckboxPrompt extends DefaultPrompt implements CheckboxPrompt {
 
     private final List<CheckboxItem> items;
+    private final int pageSize;
+    private final boolean showPageIndicator;
 
     public DefaultCheckboxPrompt(String name, String message, List<CheckboxItem> items) {
+        this(name, message, items, 0, true);
+    }
+
+    public DefaultCheckboxPrompt(String name, String message, List<CheckboxItem> items, int pageSize) {
+        this(name, message, items, pageSize, true);
+    }
+
+    public DefaultCheckboxPrompt(
+            String name, String message, List<CheckboxItem> items, int pageSize, boolean showPageIndicator) {
         super(name, message);
         this.items = new ArrayList<>(items);
+        this.pageSize = pageSize;
+        this.showPageIndicator = showPageIndicator;
     }
 
     @Override
     public List<CheckboxItem> getItems() {
         return new ArrayList<>(items);
+    }
+
+    @Override
+    public int getPageSize() {
+        return pageSize;
+    }
+
+    @Override
+    public boolean showPageIndicator() {
+        return showPageIndicator;
     }
 }

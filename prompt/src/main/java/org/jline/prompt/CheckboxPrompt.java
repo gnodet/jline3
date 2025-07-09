@@ -22,4 +22,24 @@ public interface CheckboxPrompt extends Prompt {
      * @return the list of checkbox items
      */
     List<CheckboxItem> getItems();
+
+    /**
+     * Get the page size for pagination.
+     * If 0 or negative, all items are shown without pagination.
+     *
+     * @return the page size, or 0 for no pagination
+     */
+    default int getPageSize() {
+        return 0;
+    }
+
+    /**
+     * Whether to show a loop indicator when pagination is enabled.
+     * If true, shows "(1/3)" style indicators.
+     *
+     * @return true to show page indicators, false to hide
+     */
+    default boolean showPageIndicator() {
+        return true;
+    }
 }

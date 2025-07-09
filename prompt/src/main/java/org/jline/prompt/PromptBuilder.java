@@ -70,4 +70,32 @@ public interface PromptBuilder {
      * @return a text builder
      */
     TextBuilder createText();
+
+    /**
+     * Create a builder for password prompts.
+     *
+     * @return a password prompt builder
+     */
+    PasswordBuilder createPasswordPrompt();
+
+    /**
+     * Create a builder for number prompts.
+     *
+     * @return a number prompt builder
+     */
+    NumberBuilder createNumberPrompt();
+
+    /**
+     * Create a builder for search prompts.
+     *
+     * @return a search prompt builder
+     */
+    <T> SearchBuilder<T> createSearchPrompt();
+
+    /**
+     * Create a builder for editor prompts.
+     *
+     * @return an editor prompt builder
+     */
+    EditorBuilder createEditorPrompt();
 }

@@ -21,14 +21,37 @@ import org.jline.prompt.ListPrompt;
 public class DefaultListPrompt extends DefaultPrompt implements ListPrompt {
 
     private final List<ListItem> items;
+    private final int pageSize;
+    private final boolean showPageIndicator;
 
     public DefaultListPrompt(String name, String message, List<ListItem> items) {
+        this(name, message, items, 0, true);
+    }
+
+    public DefaultListPrompt(String name, String message, List<ListItem> items, int pageSize) {
+        this(name, message, items, pageSize, true);
+    }
+
+    public DefaultListPrompt(
+            String name, String message, List<ListItem> items, int pageSize, boolean showPageIndicator) {
         super(name, message);
         this.items = new ArrayList<>(items);
+        this.pageSize = pageSize;
+        this.showPageIndicator = showPageIndicator;
     }
 
     @Override
     public List<ListItem> getItems() {
         return new ArrayList<>(items);
+    }
+
+    @Override
+    public int getPageSize() {
+        return pageSize;
+    }
+
+    @Override
+    public boolean showPageIndicator() {
+        return showPageIndicator;
     }
 }

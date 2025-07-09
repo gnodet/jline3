@@ -29,6 +29,8 @@ public class DefaultListBuilder implements ListBuilder {
     private String currentItemText;
     private boolean currentItemDisabled;
     private String currentItemDisabledText;
+    private int pageSize = 0;
+    private boolean showPageIndicator = true;
 
     /**
      * Create a new DefaultListBuilder with the given parent.
@@ -126,13 +128,25 @@ public class DefaultListBuilder implements ListBuilder {
         return this;
     }
 
+    @Override
+    public ListBuilder pageSize(int pageSize) {
+        this.pageSize = pageSize;
+        return this;
+    }
+
+    @Override
+    public ListBuilder showPageIndicator(boolean showPageIndicator) {
+        this.showPageIndicator = showPageIndicator;
+        return this;
+    }
+
     /**
      * Add this prompt to the parent builder and return to the parent.
      *
      * @return the parent prompt builder
      */
     public PromptBuilder addPrompt() {
-        DefaultListPrompt prompt = new DefaultListPrompt(name, message, items);
+        DefaultListPrompt prompt = new DefaultListPrompt(name, message, items, pageSize, showPageIndicator);
         parent.addPrompt(prompt);
         return parent;
     }

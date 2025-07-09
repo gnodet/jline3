@@ -67,4 +67,24 @@ public class DefaultPromptBuilder implements PromptBuilder {
     public org.jline.prompt.TextBuilder createText() {
         return new DefaultTextBuilder(this);
     }
+
+    @Override
+    public PasswordBuilder createPasswordPrompt() {
+        return new DefaultPasswordBuilder(this);
+    }
+
+    @Override
+    public NumberBuilder createNumberPrompt() {
+        return new DefaultNumberBuilder(this);
+    }
+
+    @Override
+    public <T> SearchBuilder<T> createSearchPrompt() {
+        return new DefaultSearchBuilder<>(this);
+    }
+
+    @Override
+    public EditorBuilder createEditorPrompt() {
+        return new DefaultEditorBuilder(this);
+    }
 }

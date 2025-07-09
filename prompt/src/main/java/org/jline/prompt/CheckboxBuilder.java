@@ -95,4 +95,20 @@ public interface CheckboxBuilder extends BaseBuilder<CheckboxBuilder> {
     default CheckboxBuilder add(String name, String text, boolean checked, boolean disabled) {
         return newItem(name).text(text).checked(checked).disabled(disabled).add();
     }
+
+    /**
+     * Set the page size for pagination.
+     *
+     * @param pageSize the page size, or 0 for no pagination
+     * @return this builder
+     */
+    CheckboxBuilder pageSize(int pageSize);
+
+    /**
+     * Set whether to show page indicators.
+     *
+     * @param showPageIndicator true to show page indicators
+     * @return this builder
+     */
+    CheckboxBuilder showPageIndicator(boolean showPageIndicator);
 }

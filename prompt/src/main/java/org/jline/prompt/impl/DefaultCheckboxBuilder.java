@@ -30,6 +30,8 @@ public class DefaultCheckboxBuilder implements CheckboxBuilder {
     private boolean currentItemChecked;
     private boolean currentItemDisabled;
     private String currentItemDisabledText;
+    private int pageSize = 0;
+    private boolean showPageIndicator = true;
 
     /**
      * Create a new DefaultCheckboxBuilder with the given parent.
@@ -141,11 +143,23 @@ public class DefaultCheckboxBuilder implements CheckboxBuilder {
         return this;
     }
 
+    @Override
+    public CheckboxBuilder pageSize(int pageSize) {
+        this.pageSize = pageSize;
+        return this;
+    }
+
+    @Override
+    public CheckboxBuilder showPageIndicator(boolean showPageIndicator) {
+        this.showPageIndicator = showPageIndicator;
+        return this;
+    }
+
     /**
      * Add this prompt to the parent builder.
      */
     public PromptBuilder addPrompt() {
-        DefaultCheckboxPrompt prompt = new DefaultCheckboxPrompt(name, message, items);
+        DefaultCheckboxPrompt prompt = new DefaultCheckboxPrompt(name, message, items, pageSize, showPageIndicator);
         parent.addPrompt(prompt);
         return parent;
     }

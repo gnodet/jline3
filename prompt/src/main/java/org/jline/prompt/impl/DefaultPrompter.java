@@ -390,7 +390,15 @@ public class DefaultPrompter implements Prompter {
     private PromptResult<? extends Prompt> executePrompt(List<AttributedString> header, Prompt prompt)
             throws IOException, UserInterruptException {
 
-        if (prompt instanceof InputPrompt) {
+        if (prompt instanceof PasswordPrompt) {
+            return executePasswordPrompt(header, (PasswordPrompt) prompt);
+        } else if (prompt instanceof NumberPrompt) {
+            return executeNumberPrompt(header, (NumberPrompt) prompt);
+        } else if (prompt instanceof SearchPrompt) {
+            return executeSearchPrompt(header, (SearchPrompt<?>) prompt);
+        } else if (prompt instanceof EditorPrompt) {
+            return executeEditorPrompt(header, (EditorPrompt) prompt);
+        } else if (prompt instanceof InputPrompt) {
             return executeInputPrompt(header, (InputPrompt) prompt);
         } else if (prompt instanceof ListPrompt) {
             return executeListPrompt(header, (ListPrompt) prompt);
@@ -542,6 +550,312 @@ public class DefaultPrompter implements Prompter {
                     throw new UserInterruptException("User cancelled");
             }
         }
+    }
+
+    private InputResult executePasswordPrompt(List<AttributedString> header, PasswordPrompt prompt)
+            throws IOException, UserInterruptException {
+        // Password prompts are just input prompts with masking
+        return executeInputPrompt(header, prompt);
+    }
+
+    private InputResult executeNumberPrompt(List<AttributedString> header, NumberPrompt prompt)
+            throws IOException, UserInterruptException {
+
+        while (true) {
+            // Execute as regular input prompt first
+            InputResult result = executeInputPrompt(header, prompt);
+            if (result == null) {
+                return null; // User cancelled
+            }
+
+            String input = result.getInput();
+            if (input.trim().isEmpty() && prompt.getDefaultValue() != null) {
+                input = prompt.getDefaultValue();
+            }
+
+            // Validate the number
+            try {
+                double value = Double.parseDouble(input);
+
+                // Check if decimals are allowed
+                if (!prompt.allowDecimals() && input.contains(".")) {
+                    terminal.writer().println("Error: " + "Please enter a whole number");
+                    terminal.flush();
+                    continue;
+                }
+
+                // Check range
+                Double min = prompt.getMin();
+                Double max = prompt.getMax();
+                if ((min != null && value < min) || (max != null && value > max)) {
+                    terminal.writer().println("Error: " + prompt.getOutOfRangeMessage());
+                    terminal.flush();
+                    continue;
+                }
+
+                return new DefaultInputResult(input, input, prompt);
+
+            } catch (NumberFormatException e) {
+                terminal.writer().println("Error: " + prompt.getInvalidNumberMessage());
+                terminal.flush();
+                // Continue the loop to ask again
+            }
+        }
+    }
+
+    private PromptResult<SearchPrompt<?>> executeSearchPrompt(List<AttributedString> header, SearchPrompt<?> prompt)
+            throws IOException, UserInterruptException {
+
+        // Create a dynamic input prompt that searches as the user types
+        StringBuilder searchTerm = new StringBuilder();
+        List<?> currentResults = new ArrayList<>();
+        int selectedIndex = 0;
+
+        // Create prompt message
+        AttributedStringBuilder asb = createMessage(prompt.getMessage(), null);
+        int startColumn = asb.columnLength();
+
+        size.copy(terminal.getSize());
+        KeyMap<InputOperation> keyMap = new KeyMap<>();
+        bindInputKeys(keyMap);
+
+        while (true) {
+            // Perform search if term is long enough
+            if (searchTerm.length() >= prompt.getMinSearchLength()) {
+                currentResults = prompt.getSearchFunction().apply(searchTerm.toString());
+                if (prompt.getMaxResults() > 0 && currentResults.size() > prompt.getMaxResults()) {
+                    currentResults = currentResults.subList(0, prompt.getMaxResults());
+                }
+            } else {
+                currentResults = new ArrayList<>();
+            }
+
+            // Ensure selected index is valid
+            if (selectedIndex >= currentResults.size()) {
+                selectedIndex = Math.max(0, currentResults.size() - 1);
+            }
+
+            // Build display
+            List<AttributedString> out = buildSearchDisplay(
+                    header, asb, searchTerm.toString(), currentResults, selectedIndex, prompt, startColumn);
+
+            display.resize(size.getRows(), size.getColumns());
+            int cursorRow = out.size() - 1;
+            int column = startColumn + searchTerm.length();
+            display.update(out, size.cursorPos(cursorRow, column));
+
+            InputOperation op = bindingReader.readBinding(keyMap);
+            switch (op) {
+                case INSERT:
+                    String ch = bindingReader.getLastBinding();
+                    searchTerm.append(ch);
+                    selectedIndex = 0; // Reset selection when typing
+                    break;
+
+                case BACKSPACE:
+                    if (searchTerm.length() > 0) {
+                        searchTerm.deleteCharAt(searchTerm.length() - 1);
+                        selectedIndex = 0;
+                    }
+                    break;
+
+                case DOWN:
+                    if (!currentResults.isEmpty() && selectedIndex < currentResults.size() - 1) {
+                        selectedIndex++;
+                    }
+                    break;
+
+                case UP:
+                    if (selectedIndex > 0) {
+                        selectedIndex--;
+                    }
+                    break;
+
+                case EXIT:
+                    if (!currentResults.isEmpty() && selectedIndex < currentResults.size()) {
+                        Object selected = currentResults.get(selectedIndex);
+                        @SuppressWarnings("unchecked")
+                        String value = ((Function<Object, String>) prompt.getValueFunction()).apply(selected);
+                        return new AbstractPromptResult<SearchPrompt<?>>(prompt) {
+                            @Override
+                            public String getResult() {
+                                return value;
+                            }
+                        };
+                    }
+                    break;
+
+                case ESCAPE:
+                    return null;
+
+                case CANCEL:
+                    throw new UserInterruptException("User cancelled");
+            }
+        }
+    }
+
+    private PromptResult<EditorPrompt> executeEditorPrompt(List<AttributedString> header, EditorPrompt prompt)
+            throws IOException, UserInterruptException {
+
+        // Display the prompt message
+        List<AttributedString> displayLines = new ArrayList<>();
+        if (header != null) {
+            displayLines.addAll(header);
+        }
+
+        AttributedStringBuilder asb = createMessage(prompt.getMessage(), null);
+        asb.append("Press Enter to open editor, Escape to cancel");
+        displayLines.add(asb.toAttributedString());
+
+        size.copy(terminal.getSize());
+        display.resize(size.getRows(), size.getColumns());
+        display.update(displayLines, -1);
+
+        // Wait for user input
+        KeyMap<InputOperation> keyMap = new KeyMap<>();
+        keyMap.bind(InputOperation.EXIT, "\r", "\n");
+        keyMap.bind(InputOperation.ESCAPE, "\u001b");
+        keyMap.bind(InputOperation.CANCEL, "\u0003");
+
+        InputOperation op = bindingReader.readBinding(keyMap);
+        switch (op) {
+            case EXIT:
+                // Launch editor
+                try {
+                    String result = launchEditor(prompt);
+                    return new AbstractPromptResult<EditorPrompt>(prompt) {
+                        @Override
+                        public String getResult() {
+                            return result;
+                        }
+                    };
+                } catch (Exception e) {
+                    terminal.writer().println("Error launching editor: " + e.getMessage());
+                    terminal.flush();
+                    return null;
+                }
+
+            case ESCAPE:
+                return null;
+
+            case CANCEL:
+                throw new UserInterruptException("User cancelled");
+
+            default:
+                return null;
+        }
+    }
+
+    private String launchEditor(EditorPrompt prompt) throws IOException, InterruptedException {
+        try {
+            // Create temporary file
+            java.io.File tempFile = java.io.File.createTempFile("jline_editor_", "." + prompt.getFileExtension());
+            tempFile.deleteOnExit();
+
+            // Write initial content if provided
+            String initialText = prompt.getInitialText();
+            if (initialText != null) {
+                try (java.io.FileWriter writer = new java.io.FileWriter(tempFile)) {
+                    writer.write(initialText);
+                }
+            }
+
+            // Use JLine's built-in Nano editor
+            Class<?> nanoClass = Class.forName("org.jline.builtins.Nano");
+            java.lang.reflect.Constructor<?> constructor =
+                    nanoClass.getConstructor(org.jline.terminal.Terminal.class, java.nio.file.Path.class);
+
+            Object nano =
+                    constructor.newInstance(terminal, tempFile.getParentFile().toPath());
+
+            // Configure nano options
+            if (prompt.getTitle() != null) {
+                java.lang.reflect.Field titleField = nanoClass.getField("title");
+                titleField.set(nano, prompt.getTitle());
+            }
+
+            java.lang.reflect.Field lineNumbersField = nanoClass.getField("printLineNumbers");
+            lineNumbersField.setBoolean(nano, prompt.showLineNumbers());
+
+            java.lang.reflect.Field wrappingField = nanoClass.getField("wrapping");
+            wrappingField.setBoolean(nano, prompt.enableWrapping());
+
+            // Get methods
+            java.lang.reflect.Method openMethod = nanoClass.getMethod("open", java.util.List.class);
+            java.lang.reflect.Method runMethod = nanoClass.getMethod("run");
+
+            // Open the file and run the editor
+            openMethod.invoke(nano, java.util.Collections.singletonList(tempFile.getName()));
+            runMethod.invoke(nano);
+
+            // Read the result
+            StringBuilder result = new StringBuilder();
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(tempFile))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (result.length() > 0) {
+                        result.append("\n");
+                    }
+                    result.append(line);
+                }
+            }
+
+            return result.toString();
+
+        } catch (ClassNotFoundException e) {
+            throw new IOException("JLine Nano editor not available. Please add jline-builtins to your classpath.", e);
+        } catch (Exception e) {
+            throw new IOException("Error launching JLine Nano editor: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Build search display with results.
+     */
+    private List<AttributedString> buildSearchDisplay(
+            List<AttributedString> header,
+            AttributedStringBuilder messageBuilder,
+            String searchTerm,
+            List<?> results,
+            int selectedIndex,
+            SearchPrompt<?> prompt,
+            int startColumn) {
+
+        List<AttributedString> out = new ArrayList<>();
+        if (header != null) {
+            out.addAll(header);
+        }
+
+        // Add search input line
+        AttributedStringBuilder searchLine = new AttributedStringBuilder();
+        searchLine.append(messageBuilder);
+        if (searchTerm.isEmpty()) {
+            searchLine.style(config.style(".me")).append(prompt.getPlaceholder());
+        } else {
+            searchLine.append(searchTerm);
+        }
+        out.add(searchLine.toAttributedString());
+
+        // Add results
+        if (results.isEmpty() && searchTerm.length() >= prompt.getMinSearchLength()) {
+            out.add(new AttributedString("No results found"));
+        } else {
+            for (int i = 0; i < results.size(); i++) {
+                Object item = results.get(i);
+                @SuppressWarnings("unchecked")
+                String display = ((Function<Object, String>) prompt.getDisplayFunction()).apply(item);
+
+                AttributedStringBuilder itemLine = new AttributedStringBuilder();
+                if (i == selectedIndex) {
+                    itemLine.style(config.style(".se")).append("❯ ").append(display);
+                } else {
+                    itemLine.append("  ").append(display);
+                }
+                out.add(itemLine.toAttributedString());
+            }
+        }
+
+        return out;
     }
 
     /**
@@ -775,7 +1089,7 @@ public class DefaultPrompter implements Prompter {
         // Interactive selection loop
         while (true) {
             // Update display with current selection
-            refreshListDisplay(header, prompt.getMessage(), items, selectRow);
+            refreshListDisplay(header, prompt.getMessage(), items, selectRow, prompt);
 
             // Read user input using BindingReader
             ListOperation op = bindingReader.readBinding(keyMap);
@@ -858,7 +1172,7 @@ public class DefaultPrompter implements Prompter {
         // Interactive selection loop
         while (true) {
             // Update display with current selection and checkbox states
-            refreshCheckboxDisplay(header, prompt.getMessage(), items, selectRow, selectedIds);
+            refreshCheckboxDisplay(header, prompt.getMessage(), items, selectRow, selectedIds, prompt);
 
             // Read user input using BindingReader
             CheckboxOperation op = bindingReader.readBinding(keyMap);
@@ -1154,11 +1468,11 @@ public class DefaultPrompter implements Prompter {
      * Refresh the display for list prompts using JLine's Display class.
      */
     private void refreshListDisplay(
-            List<AttributedString> header, String message, List<ListItem> items, int cursorRow) {
+            List<AttributedString> header, String message, List<ListItem> items, int cursorRow, ListPrompt prompt) {
         size.copy(terminal.getSize());
         display.resize(size.getRows(), size.getColumns());
         display.update(
-                buildListDisplayLines(header, message, items, cursorRow),
+                buildListDisplayLines(header, message, items, cursorRow, prompt),
                 size.cursorPos(Math.min(size.getRows() - 1, firstItemRow + items.size()), 0));
     }
 
@@ -1166,7 +1480,7 @@ public class DefaultPrompter implements Prompter {
      * Build display lines for list prompts with column layout support.
      */
     private List<AttributedString> buildListDisplayLines(
-            List<AttributedString> header, String message, List<ListItem> items, int cursorRow) {
+            List<AttributedString> header, String message, List<ListItem> items, int cursorRow, ListPrompt prompt) {
         List<AttributedString> out = new ArrayList<>(header != null ? header : new ArrayList<>());
 
         // Add message line
@@ -1176,7 +1490,7 @@ public class DefaultPrompter implements Prompter {
 
         if (columns == 1) {
             // Single column layout - use original logic with pagination
-            computeListRange(cursorRow, items.size());
+            computeListRange(cursorRow, items.size(), prompt.getPageSize());
             for (int i = range.first; i < range.last; i++) {
                 if (items.isEmpty() || i > items.size() - 1) {
                     break;
@@ -1338,11 +1652,12 @@ public class DefaultPrompter implements Prompter {
             String message,
             List<CheckboxItem> items,
             int cursorRow,
-            Set<String> selectedIds) {
+            Set<String> selectedIds,
+            CheckboxPrompt prompt) {
         size.copy(terminal.getSize());
         display.resize(size.getRows(), size.getColumns());
         display.update(
-                buildCheckboxDisplayLines(header, message, items, cursorRow, selectedIds),
+                buildCheckboxDisplayLines(header, message, items, cursorRow, selectedIds, prompt),
                 size.cursorPos(Math.min(size.getRows() - 1, firstItemRow + items.size()), 0));
     }
 
@@ -1354,7 +1669,8 @@ public class DefaultPrompter implements Prompter {
             String message,
             List<CheckboxItem> items,
             int cursorRow,
-            Set<String> selectedIds) {
+            Set<String> selectedIds,
+            CheckboxPrompt prompt) {
         List<AttributedString> out = new ArrayList<>(header != null ? header : new ArrayList<>());
 
         // Add message line
@@ -1364,7 +1680,7 @@ public class DefaultPrompter implements Prompter {
 
         if (columns == 1) {
             // Single column layout - use original logic with pagination
-            computeListRange(cursorRow, items.size());
+            computeListRange(cursorRow, items.size(), prompt.getPageSize());
             for (int i = range.first; i < range.last; i++) {
                 if (items.isEmpty() || i > items.size() - 1) {
                     break;
@@ -1563,20 +1879,28 @@ public class DefaultPrompter implements Prompter {
     }
 
     /**
-     * Compute the visible range of items based on cursor position and terminal size.
+     * Compute the visible range of items based on cursor position, terminal size, and page size.
      */
-    private void computeListRange(int cursorRow, int itemsSize) {
+    private void computeListRange(int cursorRow, int itemsSize, int pageSize) {
         if (range != null && range.first <= cursorRow - firstItemRow && range.last - 1 > cursorRow - firstItemRow) {
             return;
         }
         range = new ListRange(0, itemsSize);
-        if (size.getRows() < firstItemRow + itemsSize) {
+
+        // Determine effective page size
+        int effectivePageSize;
+        if (pageSize > 0) {
+            effectivePageSize = pageSize;
+        } else {
+            effectivePageSize = size.getRows() - firstItemRow;
+        }
+
+        if (effectivePageSize < itemsSize) {
             int itemId = cursorRow - firstItemRow;
-            int forList = size.getRows() - firstItemRow;
-            if (itemId < forList - 1) {
-                range = new ListRange(0, forList);
+            if (itemId < effectivePageSize - 1) {
+                range = new ListRange(0, effectivePageSize);
             } else {
-                range = new ListRange(itemId - forList + 2, itemId + 2);
+                range = new ListRange(itemId - effectivePageSize + 2, itemId + 2);
             }
         }
     }
