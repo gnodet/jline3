@@ -141,14 +141,25 @@ public interface PrompterConfig {
                 indicator, uncheckedBox, checkedBox, unavailable, styleResolver, cancellableFirstPrompt);
     }
 
+    // Style constants for use with StyleResolver
+    /** Cursor/selection indicator style */
     String CURSOR = ".cu";
+    /** Prompt text style */
     String PR = ".pr";
+    /** Message text style */
     String ME = ".me";
+    /** Answer text style */
     String AN = ".an";
+    /** Box enabled style */
     String BE = ".be";
+    /** Box disabled style */
     String BD = ".bd";
+    /** Selected item style */
     String SE = ".se";
+    /** Checkbox style */
     String CB = ".cb";
+    /** Error message style */
+    String ERROR = ".er";
 
     default AttributedStyle style(String style) {
         return styleResolver().resolve(style);

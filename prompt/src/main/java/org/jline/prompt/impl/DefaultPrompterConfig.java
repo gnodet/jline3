@@ -85,7 +85,7 @@ public class DefaultPrompterConfig implements PrompterConfig {
             StyleResolver resolver,
             boolean cancellableFirstPrompt) {
         if (resolver == null) {
-            String defaultColors = "cu=36:be=32:bd=37:pr=32:me=1:an=36:se=36:cb=100";
+            String defaultColors = "cu=36:be=32:bd=37:pr=32:me=1:an=36:se=36:cb=100:er=31";
             String envColors = System.getenv("PROMPTER_COLORS");
             String colors = envColors != null ? envColors : defaultColors;
 

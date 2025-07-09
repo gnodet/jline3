@@ -37,7 +37,6 @@ import org.jline.terminal.Size;
 import org.jline.terminal.Terminal;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStringBuilder;
-import org.jline.utils.AttributedStyle;
 import org.jline.utils.Display;
 
 import static org.jline.keymap.KeyMap.*;
@@ -563,9 +562,9 @@ public class DefaultPrompter implements Prompter {
             // Build header with error message if present
             List<AttributedString> currentHeader = new ArrayList<>(header);
             if (errorMessage != null) {
-                // Add error message in red with ">> " prefix like Inquirer.js
+                // Add error message with ">> " prefix like Inquirer.js using style resolver
                 AttributedString errorLine = new AttributedStringBuilder()
-                        .style(AttributedStyle.DEFAULT.foreground(AttributedStyle.RED))
+                        .style(config.style(PrompterConfig.ERROR))
                         .append(">> ")
                         .append(errorMessage)
                         .toAttributedString();
