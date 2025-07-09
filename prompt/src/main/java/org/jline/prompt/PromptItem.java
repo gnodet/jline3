@@ -15,13 +15,6 @@ package org.jline.prompt;
 public interface PromptItem {
 
     /**
-     * Whether this item can be selected.
-     *
-     * @return true if this item can be selected
-     */
-    boolean isSelectable();
-
-    /**
      * Get the name of this item.
      *
      * @return the name

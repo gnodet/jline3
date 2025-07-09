@@ -1118,7 +1118,7 @@ public class DefaultPrompter implements Prompter {
                     for (ListItem item : items) {
                         if (item instanceof ChoiceItem) {
                             ChoiceItem choiceItem = (ChoiceItem) item;
-                            if (choiceItem.isSelectable()
+                            if (!choiceItem.isDisabled()
                                     && choiceItem.getKey() != null
                                     && choiceItem.getKey().toString().equals(ch)) {
                                 selectRow = firstItemRow + id;
@@ -1197,7 +1197,7 @@ public class DefaultPrompter implements Prompter {
                     break;
                 case TOGGLE:
                     CheckboxItem currentItem = items.get(selectRow - firstItemRow);
-                    if (currentItem.isSelectable()) {
+                    if (!currentItem.isDisabled()) {
                         if (selectedIds.contains(currentItem.getName())) {
                             selectedIds.remove(currentItem.getName());
                         } else {
@@ -1232,7 +1232,7 @@ public class DefaultPrompter implements Prompter {
         // Find default choice if any
         ChoiceItem defaultChoice = null;
         for (ChoiceItem item : items) {
-            if (item.isDefaultChoice() && item.isSelectable()) {
+            if (item.isDefaultChoice() && !item.isDisabled()) {
                 defaultChoice = item;
                 break;
             }
@@ -1271,7 +1271,7 @@ public class DefaultPrompter implements Prompter {
                     // Check if the input character matches any choice key
                     String ch = bindingReader.getLastBinding();
                     for (ChoiceItem item : items) {
-                        if (item.isSelectable()
+                        if (!item.isDisabled()
                                 && item.getKey() != null
                                 && item.getKey().toString().equalsIgnoreCase(ch)) {
                             // Found matching choice - update display with answer
@@ -1524,7 +1524,7 @@ public class DefaultPrompter implements Prompter {
                     .append(" ")
                     .append(key)
                     .append(item.getText());
-        } else if (item.isSelectable()) {
+        } else if (!item.isDisabled()) {
             fillIndicatorSpace(asb);
             asb.append(" ").append(key).append(item.getText());
         } else {
@@ -1574,7 +1574,7 @@ public class DefaultPrompter implements Prompter {
                                 .append(" ")
                                 .append(key)
                                 .append(item.getText());
-                    } else if (item.isSelectable()) {
+                    } else if (!item.isDisabled()) {
                         fillIndicatorSpace(itemBuilder);
                         itemBuilder.append(" ").append(key).append(item.getText());
                     } else {
@@ -1706,35 +1706,31 @@ public class DefaultPrompter implements Prompter {
     private AttributedString buildSingleCheckboxLine(CheckboxItem item, boolean isSelected, Set<String> selectedIds) {
         AttributedStringBuilder asb = new AttributedStringBuilder();
 
-        if (item.isSelectable()) {
+        if (!item.isDisabled()) {
             // Selection indicator
             if (isSelected) {
                 asb.styled(config.style(PrompterConfig.CURSOR), config.indicator());
             } else {
                 fillIndicatorSpace(asb);
             }
+            asb.append(" ");
 
             // Checkbox state
-            if (selectedIds.contains(item.getName())) {
-                asb.styled(config.style(PrompterConfig.BE), config.checkedBox());
-            } else {
-                asb.styled(config.style(PrompterConfig.BE), config.uncheckedBox());
-            }
+            asb.styled(
+                    config.style(PrompterConfig.BE),
+                    selectedIds.contains(item.getName()) ? config.checkedBox() : config.uncheckedBox());
+
+            // Item text
             asb.append(" ");
+            asb.append(item.getText());
         } else {
             // Disabled item
             fillIndicatorSpace(asb);
-            if (item.isDisabled()) {
-                asb.styled(config.style(PrompterConfig.BD), config.unavailable());
-            } else {
-                fillCheckboxSpace(asb);
-            }
             asb.append(" ");
-        }
-
-        // Item text
-        asb.append(item.getText());
-        if (item.isDisabled()) {
+            asb.styled(config.style(PrompterConfig.BD), config.unavailable());
+            // Item text
+            asb.append(" ");
+            asb.append(item.getText());
             asb.append(" (").append(item.getDisabledText()).append(")");
         }
 
@@ -1764,37 +1760,32 @@ public class DefaultPrompter implements Prompter {
                     // Build item text
                     AttributedStringBuilder itemBuilder = new AttributedStringBuilder();
 
-                    if (item.isSelectable()) {
+                    if (!item.isDisabled()) {
                         // Selection indicator
                         if (isSelected) {
-                            itemBuilder
-                                    .styled(config.style(PrompterConfig.CURSOR), config.indicator())
-                                    .style(AttributedStyle.DEFAULT)
-                                    .append(" ");
+                            itemBuilder.styled(config.style(PrompterConfig.CURSOR), config.indicator());
                         } else {
-                            fillIndicatorSpace(itemBuilder).append(" ");
+                            fillIndicatorSpace(itemBuilder);
                         }
+                        itemBuilder.append(" ");
 
                         // Checkbox state
-                        if (selectedIds.contains(item.getName())) {
-                            itemBuilder.styled(config.style(PrompterConfig.BE), config.checkedBox());
-                        } else {
-                            itemBuilder.styled(config.style(PrompterConfig.BE), config.uncheckedBox());
-                        }
+                        itemBuilder.styled(
+                                config.style(PrompterConfig.BE),
+                                selectedIds.contains(item.getName()) ? config.checkedBox() : config.uncheckedBox());
+
+                        // Item text
+                        itemBuilder.append(" ");
+                        itemBuilder.append(item.getText());
                     } else {
                         // Disabled item
                         fillIndicatorSpace(itemBuilder);
                         itemBuilder.append(" ");
-                        if (item.isDisabled()) {
-                            itemBuilder.styled(config.style(PrompterConfig.BD), config.unavailable());
-                        } else {
-                            fillCheckboxSpace(itemBuilder);
-                        }
-                    }
-
-                    // Item text
-                    itemBuilder.append(item.getText());
-                    if (item.isDisabled()) {
+                        itemBuilder.style(config.style(PrompterConfig.BD));
+                        itemBuilder.append(config.unavailable());
+                        // Item text
+                        itemBuilder.append(" ");
+                        itemBuilder.append(item.getText());
                         itemBuilder.append(" (").append(item.getDisabledText()).append(")");
                     }
 
@@ -1854,7 +1845,7 @@ public class DefaultPrompter implements Prompter {
         out.add(AttributedString.EMPTY); // Empty line before choices
 
         for (ChoiceItem item : items) {
-            if (item.isSelectable()) {
+            if (!item.isDisabled()) {
                 AttributedStringBuilder asb = new AttributedStringBuilder();
                 asb.append("  ");
                 if (item.getKey() != null && item.getKey() != ' ') {
@@ -1918,12 +1909,12 @@ public class DefaultPrompter implements Prompter {
         int next;
         for (next = row + 1;
                 next - firstItemRow < itemsSize
-                        && !items.get(next - firstItemRow).isSelectable();
+                        && items.get(next - firstItemRow).isDisabled();
                 next++) {}
         if (next - firstItemRow >= itemsSize) {
             for (next = firstItemRow;
                     next - firstItemRow < itemsSize
-                            && !items.get(next - firstItemRow).isSelectable();
+                            && items.get(next - firstItemRow).isDisabled();
                     next++) {}
         }
         return next;
@@ -1936,11 +1927,11 @@ public class DefaultPrompter implements Prompter {
         int itemsSize = items.size();
         int prev;
         for (prev = row - 1;
-                prev - firstItemRow >= 0 && !items.get(prev - firstItemRow).isSelectable();
+                prev - firstItemRow >= 0 && items.get(prev - firstItemRow).isDisabled();
                 prev--) {}
         if (prev - firstItemRow < 0) {
             for (prev = firstItemRow + itemsSize - 1;
-                    prev - firstItemRow >= 0 && !items.get(prev - firstItemRow).isSelectable();
+                    prev - firstItemRow >= 0 && items.get(prev - firstItemRow).isDisabled();
                     prev--) {}
         }
         return prev;
@@ -2021,17 +2012,6 @@ public class DefaultPrompter implements Prompter {
     }
 
     /**
-     * Convert linear item index to 2D grid position.
-     */
-    private int[] indexToGrid(int index) {
-        if (rowsFirst) {
-            return new int[] {index / columns, index % columns};
-        } else {
-            return new int[] {index % lines, index / lines};
-        }
-    }
-
-    /**
      * Navigate to next column in grid layout.
      */
     private static <T extends PromptItem> int nextColumn(
@@ -2045,7 +2025,7 @@ public class DefaultPrompter implements Prompter {
         col = (col + 1) % columns;
 
         int newIndex = gridToIndex(row, col, items.size(), columns, lines, rowsFirst);
-        if (newIndex >= 0 && newIndex < items.size() && items.get(newIndex).isSelectable()) {
+        if (newIndex >= 0 && newIndex < items.size() && !items.get(newIndex).isDisabled()) {
             return firstItemRow + newIndex;
         }
 
@@ -2067,7 +2047,7 @@ public class DefaultPrompter implements Prompter {
         col = (col - 1 + columns) % columns;
 
         int newIndex = gridToIndex(row, col, items.size(), columns, lines, rowsFirst);
-        if (newIndex >= 0 && newIndex < items.size() && items.get(newIndex).isSelectable()) {
+        if (newIndex >= 0 && newIndex < items.size() && !items.get(newIndex).isDisabled()) {
             return firstItemRow + newIndex;
         }
 

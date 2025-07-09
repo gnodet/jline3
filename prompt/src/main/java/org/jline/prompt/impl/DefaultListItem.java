@@ -52,11 +52,6 @@ public class DefaultListItem implements ListItem {
     }
 
     @Override
-    public boolean isSelectable() {
-        return !disabled; // List items are selectable unless disabled
-    }
-
-    @Override
     public String toString() {
         return "DefaultListItem{name='" + name + "', text='" + text + "', disabled=" + disabled + "}";
     }

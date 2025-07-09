@@ -63,11 +63,6 @@ public class DefaultCheckboxItem implements CheckboxItem {
     }
 
     @Override
-    public boolean isSelectable() {
-        return !disabled; // Checkbox items are selectable unless disabled
-    }
-
-    @Override
     public String toString() {
         return "DefaultCheckboxItem{name='" + name + "', text='" + text + "', checked=" + checked + ", disabled="
                 + disabled + "}";

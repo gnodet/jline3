@@ -58,11 +58,6 @@ public class DefaultChoiceItem implements ChoiceItem {
     }
 
     @Override
-    public boolean isSelectable() {
-        return true; // Choice items are selectable by default
-    }
-
-    @Override
     public String toString() {
         return "DefaultChoiceItem{name='" + name + "', text='" + text + "', key=" + key + ", defaultChoice="
                 + defaultChoice + "}";
