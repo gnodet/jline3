@@ -1,0 +1,67 @@
+project:
+  name: jline3
+  description: JLine 3 - Java console input library
+
+# Tools required for JLine build and website
+tools:
+  java:
+    version: "21"
+    distribution: "temurin"
+  maven:
+    version: "3.9"   # resolves to latest 3.9.x (3.9.11)
+  node:
+    version: "lts"   # for website tasks
+
+# Global environment
+environment:
+  MAVEN_OPTS: "-Xmx2g"
+
+# Commands replacing the old build script targets
+commands:
+  rebuild:
+    description: "Clean and install the project"
+    requires: [java, maven]
+    script: "mvn clean install"
+
+  license-check:
+    description: "Check license headers"
+    requires: [java, maven]
+    script: "mvn -Plicense-check -N"
+
+  license-format:
+    description: "Format license headers"
+    requires: [java, maven]
+    script: "mvn -Plicense-format -N"
+
+  ci-prepare:
+    description: "Prepare for CI build (license check)"
+    requires: [java, maven]
+    script: "mvx run license-check"
+
+  ci-build:
+    description: "Build for CI (install for PRs, deploy otherwise)"
+    requires: [java, maven]
+    script: "mvn clean deploy"
+
+  change-version:
+    description: "Change the version of the project"
+    requires: [java, maven]
+    script: "mvn org.eclipse.tycho:tycho-versions-plugin:0.25.0:set-version -Dtycho.mode=maven -Dartifacts=jline -Dproperties=jline.version -DnewVersion=$1"
+
+  website:
+    description: "Build the website (uses Node)"
+    requires: [node]
+    working_dir: website
+    script: "npm run build"
+
+  website-dev:
+    description: "Start website development server"
+    requires: [node]
+    working_dir: website
+    script: "npm run start-with-snippets"
+
+  website-serve:
+    description: "Serve the built website"
+    requires: [node]
+    working_dir: website
+    script: "npm run serve"
