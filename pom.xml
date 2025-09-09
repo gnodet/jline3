@@ -544,8 +544,9 @@
                             <phase>verify</phase>
                             <configuration>
                                 <bestPractices>true</bestPractices>
-                                <useAgent>false</useAgent>
-                                <signer>bc</signer>
+                                <useAgent>true</useAgent>
+                                <keyname>6895F17C27FF3E35</keyname>
+                                <signer>gpg</signer>
                             </configuration>
                         </execution>
                     </executions>
