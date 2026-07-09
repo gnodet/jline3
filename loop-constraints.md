@@ -11,7 +11,7 @@
 - Never review draft PRs
 - Never review bot PRs (dependabot, renovate, github-actions)
 - Max 3 PRs per loop iteration
-- Max 2000 lines changed per PR (skip larger, flag for manual)
+- No size limit -- review all PRs regardless of diff size
 
 ## Review Quality
 - Always run verifier sub-agent before posting findings

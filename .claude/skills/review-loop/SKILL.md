@@ -96,8 +96,8 @@ Sort remaining PRs by priority:
 
 1. **High priority** -- PRs with `reviewDecision` = `REVIEW_REQUIRED` and no reviewer
    activity, or PRs older than 7 days without review
-2. **Medium priority** -- PRs with recent updates, moderate size (< 500 lines changed)
-3. **Low priority** -- Large PRs (> 500 lines), or PRs that already have reviews from others
+2. **Medium priority** -- PRs with recent updates
+3. **Low priority** -- PRs that already have reviews from others
 
 Log a summary:
 
@@ -257,15 +257,16 @@ After all reviews are posted (or skipped):
 
 2. Add reviewed PRs to the "Reviewed PRs" table with date and verdict
 
-3. Add skipped PRs (too large, bot, etc.) to the "Skipped PRs" table.
+3. Add skipped PRs (bot, etc.) to the "Skipped PRs" table.
    **Never permanently skip a PR whose `reviewDecision` is `CHANGES_REQUESTED`.**
    Those PRs should remain trackable via the AI-review-detection filter so they
    are automatically re-reviewed when the author pushes updates. Only add PRs to
    the Skipped table for permanent reasons: bot authorship, `DO NOT MERGE` title,
-   `dependencies` label, or exceeding the diff size limit. PRs with prior AI
-   reviews (whether APPROVE or CHANGES_REQUESTED) that have not been updated
-   since the last review are simply filtered out by the AI-review-detection logic
-   in Step 3 and do NOT need a Skipped table entry.
+   or `dependencies` label. **Do NOT skip PRs for being too large** -- review
+   all PRs regardless of diff size. PRs with prior AI reviews (whether APPROVE
+   or CHANGES_REQUESTED) that have not been updated since the last review are
+   simply filtered out by the AI-review-detection logic in Step 3 and do NOT
+   need a Skipped table entry.
 
 4. Clear the "Review Queue" and repopulate with remaining unreviewed PRs
 

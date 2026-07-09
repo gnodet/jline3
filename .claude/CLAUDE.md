@@ -14,7 +14,7 @@ guideline. Track state across runs in `STATE.md`.
 - **Cadence:** Run via `/loop` — recommended: `/loop 1h /review-loop`
 - **Level:** L2 — reviews are posted to GitHub with inline comments
 - **Max PRs per run:** 3
-- **Max diff size:** 2000 lines (larger PRs flagged for manual review)
+- **Max diff size:** none (review all PRs regardless of size)
 
 ## Architecture
 
