@@ -2,9 +2,9 @@
 
 ## Last Run
 
-- **Timestamp:** _(not yet run)_
-- **PRs checked:** 0
-- **Reviews posted:** 0
+- **Timestamp:** 2026-07-09T22:11:00Z
+- **PRs checked:** 7
+- **Reviews posted:** 3
 
 ## Reviewed PRs
 
@@ -12,6 +12,9 @@
 
 | PR | Title | Author | Reviewed | Verdict | Notes |
 |----|-------|--------|----------|---------|-------|
+| #2053 | guard styleMatches and highlighter rules against ReDoS | uchiha-bug-hunter | 2026-07-09 | REQUEST_CHANGES | Re-review; catch block doesn't reset startEndHighlight/ruleStartId state on timeout |
+| #2045 | fix: confine ConfigurationPath lookups to the config directory | uchiha-bug-hunter | 2026-07-09 | REQUEST_CHANGES | confine() breaks with Path.of(".") as base; test coverage gaps |
+| #2055 | fix: disable Read File command in nano restricted mode | uchiha-bug-hunter | 2026-07-09 | COMMENT | Correct fix; suggested hiding ^R shortcut in restricted mode for UX consistency |
 
 ## Skipped PRs
 
@@ -26,3 +29,7 @@
 
 | PR | Title | Author | Priority | Queued |
 |----|-------|--------|----------|-------|
+| #2052 | fix: only read local jar: archives in PosixCommands getSources | uchiha-bug-hunter | Medium | 2026-07-09 |
+| #2020 | feat: change default of softwareSignals to false and deprecate | gnodet | Medium | 2026-07-09 |
+| #2021 | feat: support in-band window resize notifications (mode 2048) | gnodet | Medium | 2026-07-09 |
+| #2007 | feat: add Kitty Keyboard Protocol support | gnodet | Low | 2026-07-09 |

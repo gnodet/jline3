@@ -20,3 +20,16 @@ Append one entry per run. Prune entries older than 30 days.
 ## Recent Runs
 
 <!-- Loop appends below this line -->
+
+```json
+{
+  "run_id": "2026-07-09T22:11:00Z",
+  "pattern": "pr-babysitter",
+  "duration_s": 600,
+  "items_found": 7,
+  "actions_taken": 3,
+  "escalations": 0,
+  "tokens_estimate": 320000,
+  "outcome": "report-only"
+}
+```
