@@ -2,7 +2,7 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-10T10:23:18Z
+- **Timestamp:** 2026-07-10T10:31:35Z
 - **PRs checked:** 9
 - **Reviews posted:** 1
 
@@ -16,7 +16,7 @@
 | #2045 | fix: confine ConfigurationPath lookups to the config directory | uchiha-bug-hunter | 2026-07-09T22:11:24Z | REQUEST_CHANGES | confine() breaks with Path.of(".") as base; test coverage gaps |
 | #2055 | fix: disable Read File command in nano restricted mode | uchiha-bug-hunter | 2026-07-10T10:23:18Z | APPROVE | Re-reviewed; author addressed ^R shortcut suggestion, both commits correct |
 | #2007 | feat: add Kitty Keyboard Protocol support | gnodet | 2026-07-10T08:24:29Z | APPROVE | Re-reviewed after force-push; keyCode nit fixed (passes 0 for legacy events) |
-| #2052 | fix: only read local jar: archives in PosixCommands getSources | uchiha-bug-hunter | 2026-07-09T23:16:45Z | APPROVE | Solid SSRF fix; thorough tests with real ServerSocket and JAR file |
+| #2052 | fix: only read local jar: archives in PosixCommands getSources | uchiha-bug-hunter | 2026-07-10T10:31:35Z | COMMENT | Re-reviewed; isLocalJarFile() hardening correct but Windows CI fails (JarURLConnection file lock) |
 | #2020 | feat: change default of softwareSignals to false and deprecate | gnodet | 2026-07-09T22:53:15Z | APPROVE | LGTM; consistent default change, proper deprecation annotations, good test coverage |
 | #2021 | feat: support in-band window resize notifications (mode 2048) | gnodet | 2026-07-09T22:53:20Z | APPROVE | LGTM; mirrors hasFocusSupport/trackFocus pattern, correct Size.of argument order |
 | #2063 | fix: drain buffered data before signaling EOF in NonBlockingPumpInputStream | gnodet | 2026-07-10T08:24:22Z | APPROVE | Re-reviewed after CountDownLatch sync; Thread.onSpinWait replaced, all CI green |
