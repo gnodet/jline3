@@ -255,7 +255,13 @@ After all reviews are posted (or skipped):
    - Number of PRs checked
    - Number of reviews posted
 
-2. Add reviewed PRs to the "Reviewed PRs" table with date and verdict
+2. Add reviewed PRs to the "Reviewed PRs" table with verdict and a
+   **full ISO 8601 timestamp** (e.g. `2026-07-09T22:11:12Z`), not a bare date.
+   Use the PR's `updatedAt` at the time of review (not the review's `submitted_at`),
+   because posting a review bumps the PR's `updatedAt` by 1-2 seconds. Recording
+   the post-bump `updatedAt` ensures exact match and prevents false re-review triggers.
+   The precondition script compares this timestamp against the PR's current `updatedAt`
+   to detect same-day updates, so bare dates cause missed re-reviews.
 
 3. Add skipped PRs (bot, etc.) to the "Skipped PRs" table.
    **Never permanently skip a PR whose `reviewDecision` is `CHANGES_REQUESTED`.**

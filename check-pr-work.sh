@@ -69,8 +69,12 @@ while IFS='|' read -r pr_num pr_updated; do
       needs_review=$((needs_review + 1))
     else
       # Already reviewed — check if updated since
-      review_date=$(echo "$reviewed_line" | awk -F'|' '{print $5}' | xargs)
-      if [[ "$pr_updated" > "${review_date}T23:59:59Z" ]]; then
+      review_ts=$(echo "$reviewed_line" | awk -F'|' '{print $5}' | xargs)
+      # If bare date (no T), fall back to T00:00:00Z (conservative — won't miss updates)
+      if [[ "$review_ts" != *T* ]]; then
+        review_ts="${review_ts}T00:00:00Z"
+      fi
+      if [[ "$pr_updated" > "$review_ts" ]]; then
         needs_review=$((needs_review + 1))
       fi
     fi
