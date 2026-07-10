@@ -2,9 +2,9 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-10T00:28:00Z
-- **PRs checked:** 8
-- **Reviews posted:** 1
+- **Timestamp:** 2026-07-10T00:42:00Z
+- **PRs checked:** 9
+- **Reviews posted:** 2
 
 ## Reviewed PRs
 
@@ -19,7 +19,8 @@
 | #2052 | fix: only read local jar: archives in PosixCommands getSources | uchiha-bug-hunter | 2026-07-09 | APPROVE | Solid SSRF fix; thorough tests with real ServerSocket and JAR file |
 | #2020 | feat: change default of softwareSignals to false and deprecate | gnodet | 2026-07-09 | APPROVE | LGTM; consistent default change, proper deprecation annotations, good test coverage |
 | #2021 | feat: support in-band window resize notifications (mode 2048) | gnodet | 2026-07-09 | APPROVE | LGTM; mirrors hasFocusSupport/trackFocus pattern, correct Size.of argument order |
-| #2063 | fix: drain buffered data before signaling EOF in NonBlockingPumpInputStream | gnodet | 2026-07-10 | APPROVE | LGTM; correct Unix pipe semantics, thread-safe, comprehensive tests |
+| #2063 | fix: drain buffered data before signaling EOF in NonBlockingPumpInputStream | gnodet | 2026-07-10 | APPROVE | Re-reviewed after ClosedException suppression commit; AtomicBoolean ordering correct |
+| #2065 | feat: allow customizing the help source in Less pager (fixes #2056) | gnodet | 2026-07-10 | APPROVE | LGTM; clean feature, follows defaultPrompt() pattern, backward-compatible |
 
 ## Skipped PRs
 
