@@ -18,7 +18,7 @@
 - Never post findings that the verifier marked as false positives
 - Always check git history (git log, git blame) before flagging issues
 - Always review against `.oss-ai-helper-rules/` project rules
-- Never auto-approve PRs > 100 lines -- record verdict only
+- Always post reviews to GitHub, including APPROVE verdicts (regardless of PR size)
 
 ## Paths (never flag as issues unless genuine security concern)
 - Generated code in `src/generated/` -- ignore formatting/style findings

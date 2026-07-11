@@ -34,7 +34,7 @@ No worktrees are used — reviews are read-only. Diffs come from `gh pr diff`.
 - NEVER merge, close, or label PRs
 - NEVER review draft PRs
 - NEVER post unverified findings — always run the verifier sub-agent first
-- NEVER auto-approve large PRs (> 100 lines) — only record in state
+- ALWAYS post reviews to GitHub, including APPROVE verdicts (regardless of PR size)
 - ALWAYS include AI attribution in reviews
 - ALWAYS update STATE.md after each review
 - ALWAYS check git history before flagging issues
