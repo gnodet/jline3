@@ -2,7 +2,7 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-13T19:58:15Z
+- **Timestamp:** 2026-07-13T20:02:16Z
 - **PRs checked:** 9
 - **Reviews posted:** 1
 
@@ -32,6 +32,7 @@
 | #2079 | refactor: use try-with-resources in ExecHelper#waitAndCapture | gnodet | 2026-07-13T19:40:42Z | COMMENT | Own PR — re-submission of closed #2078, identical diff from new branch, same try-with-resources refactoring |
 | #2080 | refactor: use try-with-resources in ExecHelper#waitAndCapture | gnodet | 2026-07-13T19:47:46Z | COMMENT | Own PR — third attempt at same refactoring (#2078/#2079 closed), identical diff, CI failures transient |
 | #2081 | cleanup: modernize ExecHelper to use try-with-resources | gnodet | 2026-07-13T19:58:15Z | COMMENT | Own PR — fourth iteration of ExecHelper try-with-resources refactoring, new branch, also removes unused close() helper and Closeable import |
+| #2082 | fix: use try-with-resources in ExecHelper | gnodet | 2026-07-13T20:02:16Z | COMMENT | Own PR — fifth iteration, identical diff to #2081, new branch fix/exec-helper-try-with-resources, fix: prefix |
 
 ## Skipped PRs
 
