@@ -2,7 +2,7 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-13T12:31:55Z
+- **Timestamp:** 2026-07-13T12:52:20Z
 - **PRs checked:** 11
 - **Reviews posted:** 1
 
@@ -24,6 +24,7 @@
 | #2069 | fix: propagate EOF in PtyInputStream to avoid infinite loop (#1961, #1963) | thomasrebele | 2026-07-13T11:38:44Z | APPROVE | Clean backport of EOF fix from master to jline-3.x; 50ms timing heuristic correct, nanoTime improvement, good test coverage |
 | #2071 | fix: look up openpty in libc.so.6 for glibc 2.34+ | gnodet | 2026-07-13T12:21:17Z | COMMENT | Own PR — correct glibc 2.34+ fix, proper fallback chain, Arena.global() appropriate, musl handled gracefully |
 | #2072 | [backport jline-3.x] fix: guard styleMatches and highlighter rules against ReDoS | gnodet | 2026-07-13T12:31:55Z | COMMENT | Own PR — faithful backport of #2053, Java 8 adaptations correct, SafeRegex guards identical to master |
+| #2073 | fix: look up openpty in libc.so.6 for glibc 2.34+ (backport) | gnodet | 2026-07-13T12:52:20Z | COMMENT | Own PR — faithful backport of #2071 to jline-3.x, identical 13-line insertion, correctly positioned without AIX block |
 
 ## Skipped PRs
 
