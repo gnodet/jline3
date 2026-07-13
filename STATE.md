@@ -2,9 +2,9 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-11T17:10:00Z
-- **PRs checked:** 10
-- **Reviews posted:** 0
+- **Timestamp:** 2026-07-13T11:38:44Z
+- **PRs checked:** 11
+- **Reviews posted:** 1
 
 ## Reviewed PRs
 
@@ -21,6 +21,7 @@
 | #2021 | feat: support in-band window resize notifications (mode 2048) | gnodet | 2026-07-09T22:53:20Z | APPROVE | LGTM; mirrors hasFocusSupport/trackFocus pattern, correct Size.of argument order |
 | #2063 | fix: drain buffered data before signaling EOF in NonBlockingPumpInputStream | gnodet | 2026-07-10T08:24:22Z | APPROVE | Re-reviewed after CountDownLatch sync; Thread.onSpinWait replaced, all CI green |
 | #2065 | feat: allow customizing the help source in Less pager (fixes #2056) | gnodet | 2026-07-10T00:42:27Z | APPROVE | LGTM; clean feature, follows defaultPrompt() pattern, backward-compatible |
+| #2069 | fix: propagate EOF in PtyInputStream to avoid infinite loop (#1961, #1963) | thomasrebele | 2026-07-13T11:38:44Z | APPROVE | Clean backport of EOF fix from master to jline-3.x; 50ms timing heuristic correct, nanoTime improvement, good test coverage |
 
 ## Skipped PRs
 
