@@ -2,8 +2,8 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-13T12:52:20Z
-- **PRs checked:** 11
+- **Timestamp:** 2026-07-13T15:02:05Z
+- **PRs checked:** 8
 - **Reviews posted:** 1
 
 ## Reviewed PRs
@@ -25,6 +25,7 @@
 | #2071 | fix: look up openpty in libc.so.6 for glibc 2.34+ | gnodet | 2026-07-13T12:21:17Z | COMMENT | Own PR — correct glibc 2.34+ fix, proper fallback chain, Arena.global() appropriate, musl handled gracefully |
 | #2072 | [backport jline-3.x] fix: guard styleMatches and highlighter rules against ReDoS | gnodet | 2026-07-13T12:31:55Z | COMMENT | Own PR — faithful backport of #2053, Java 8 adaptations correct, SafeRegex guards identical to master |
 | #2073 | fix: look up openpty in libc.so.6 for glibc 2.34+ (backport) | gnodet | 2026-07-13T12:52:20Z | COMMENT | Own PR — faithful backport of #2071 to jline-3.x, identical 13-line insertion, correctly positioned without AIX block |
+| #2074 | fix: backport #2054 — drain buffered data before EOF in NonBlockingPumpInputStream | gnodet | 2026-07-13T15:02:05Z | COMMENT | Own PR — faithful backport of #2063, correct 3.x close-mode handling, try-finally for Java 8 compat |
 
 ## Skipped PRs
 
