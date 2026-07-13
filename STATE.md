@@ -2,7 +2,7 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-13T11:38:44Z
+- **Timestamp:** 2026-07-13T12:21:17Z
 - **PRs checked:** 11
 - **Reviews posted:** 1
 
@@ -22,6 +22,7 @@
 | #2063 | fix: drain buffered data before signaling EOF in NonBlockingPumpInputStream | gnodet | 2026-07-10T08:24:22Z | APPROVE | Re-reviewed after CountDownLatch sync; Thread.onSpinWait replaced, all CI green |
 | #2065 | feat: allow customizing the help source in Less pager (fixes #2056) | gnodet | 2026-07-10T00:42:27Z | APPROVE | LGTM; clean feature, follows defaultPrompt() pattern, backward-compatible |
 | #2069 | fix: propagate EOF in PtyInputStream to avoid infinite loop (#1961, #1963) | thomasrebele | 2026-07-13T11:38:44Z | APPROVE | Clean backport of EOF fix from master to jline-3.x; 50ms timing heuristic correct, nanoTime improvement, good test coverage |
+| #2071 | fix: look up openpty in libc.so.6 for glibc 2.34+ | gnodet | 2026-07-13T12:21:17Z | COMMENT | Own PR — correct glibc 2.34+ fix, proper fallback chain, Arena.global() appropriate, musl handled gracefully |
 
 ## Skipped PRs
 
