@@ -2,8 +2,8 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-13T15:34:31Z
-- **PRs checked:** 8
+- **Timestamp:** 2026-07-13T19:16:08Z
+- **PRs checked:** 9
 - **Reviews posted:** 1
 
 ## Reviewed PRs
@@ -28,6 +28,7 @@
 | #2074 | fix: backport #2054 — drain buffered data before EOF in NonBlockingPumpInputStream | gnodet | 2026-07-13T15:09:46Z | COMMENT | Own PR — re-reviewed after SonarCloud fix; assertion-less test now properly verifies WARN-mode EOF behavior |
 | #2075 | fix: disable Read File command in nano restricted mode (backport #2055) | gnodet | 2026-07-13T15:26:50Z | COMMENT | Own PR — faithful backport of #2055, identical Nano.java changes, test adapted for Java 8 and 3.x conventions |
 | #2076 | fix: confine ConfigurationPath lookups to the config directory (backport #2045) | gnodet | 2026-07-13T15:34:31Z | COMMENT | Own PR — faithful backport of #2045, confine() security fix identical, all 6 tests adapted for Java 8 |
+| #2078 | refactor: use try-with-resources in ExecHelper#waitAndCapture | gnodet | 2026-07-13T19:16:08Z | COMMENT | Own PR — clean try-with-resources conversion, correct semantics, minor close-order change inconsequential |
 
 ## Skipped PRs
 
