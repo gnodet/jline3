@@ -2,9 +2,9 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-13T20:23:14Z
-- **PRs checked:** 9
-- **Reviews posted:** 1
+- **Timestamp:** 2026-07-13T20:24:33Z
+- **PRs checked:** 10
+- **Reviews posted:** 0
 
 ## Reviewed PRs
 
@@ -33,7 +33,7 @@
 | #2080 | refactor: use try-with-resources in ExecHelper#waitAndCapture | gnodet | 2026-07-13T19:47:46Z | COMMENT | Own PR — third attempt at same refactoring (#2078/#2079 closed), identical diff, CI failures transient |
 | #2081 | cleanup: modernize ExecHelper to use try-with-resources | gnodet | 2026-07-13T19:58:15Z | COMMENT | Own PR — fourth iteration of ExecHelper try-with-resources refactoring, new branch, also removes unused close() helper and Closeable import |
 | #2082 | fix: use try-with-resources in ExecHelper | gnodet | 2026-07-13T20:02:16Z | COMMENT | Own PR — fifth iteration, identical diff to #2081, new branch fix/exec-helper-try-with-resources, fix: prefix |
-| #2083 | improve: use try-with-resources for process streams in ExecHelper | gnodet | 2026-07-13T20:23:14Z | COMMENT | Own PR — sixth iteration, identical diff (hash 77c65b4c1), improve: prefix, branch improve/exec-helper-resource-handling |
+| #2083 | improve: use try-with-resources for process streams in ExecHelper | gnodet | 2026-07-13T20:24:33Z | COMMENT | Own PR — sixth iteration, identical diff (hash 77c65b4c1), improve: prefix, branch improve/exec-helper-resource-handling |
 
 ## Skipped PRs
 
