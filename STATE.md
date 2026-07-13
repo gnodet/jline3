@@ -2,9 +2,9 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-13T19:53:00Z
-- **PRs checked:** 8
-- **Reviews posted:** 0
+- **Timestamp:** 2026-07-13T19:47:46Z
+- **PRs checked:** 9
+- **Reviews posted:** 1
 
 ## Reviewed PRs
 
@@ -30,6 +30,7 @@
 | #2076 | fix: confine ConfigurationPath lookups to the config directory (backport #2045) | gnodet | 2026-07-13T15:34:31Z | COMMENT | Own PR — faithful backport of #2045, confine() security fix identical, all 6 tests adapted for Java 8 |
 | #2078 | refactor: use try-with-resources in ExecHelper#waitAndCapture | gnodet | 2026-07-13T19:16:08Z | COMMENT | Own PR — clean try-with-resources conversion, correct semantics, minor close-order change inconsequential |
 | #2079 | refactor: use try-with-resources in ExecHelper#waitAndCapture | gnodet | 2026-07-13T19:40:42Z | COMMENT | Own PR — re-submission of closed #2078, identical diff from new branch, same try-with-resources refactoring |
+| #2080 | refactor: use try-with-resources in ExecHelper#waitAndCapture | gnodet | 2026-07-13T19:47:46Z | COMMENT | Own PR — third attempt at same refactoring (#2078/#2079 closed), identical diff, CI failures transient |
 
 ## Skipped PRs
 
