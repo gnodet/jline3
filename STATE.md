@@ -2,7 +2,7 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-13T20:49:39Z
+- **Timestamp:** 2026-07-13T21:15:46Z
 - **PRs checked:** 11
 - **Reviews posted:** 1
 
@@ -36,6 +36,7 @@
 | #2083 | improve: use try-with-resources for process streams in ExecHelper | gnodet | 2026-07-13T20:25:09Z | COMMENT | Own PR — sixth iteration, identical diff (hash 77c65b4c1), improve: prefix, branch improve/exec-helper-resource-handling |
 | #2086 | refactor: modernize ExecHelper stream handling | gnodet | 2026-07-13T20:41:30Z | COMMENT | Own PR — seventh iteration, identical diff (hash 77c65b4c1), refactor: prefix, branch refactor/exechelper-modernize |
 | #2087 | cleanup: safer process stream handling in ExecHelper | gnodet | 2026-07-13T20:49:39Z | COMMENT | Own PR — eighth iteration, identical diff (hash 77c65b4c1), cleanup: prefix, branch cleanup/process-stream-safety |
+| #2088 | enhancement: adopt try-with-resources in ExecHelper | gnodet | 2026-07-13T21:15:46Z | COMMENT | Own PR — ninth iteration of ExecHelper try-with-resources refactoring, clean conversion, behavior-preserving |
 
 ## Skipped PRs
 
