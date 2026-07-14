@@ -2,10 +2,10 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-14T20:19:44Z
-- **PRs checked:** 11
-- **Reviews posted:** 1
-- **Note:** Re-reviewed #2076 after symlink hardening commit (6c78b20); flagged macOS CI failure in test assertion
+- **Timestamp:** 2026-07-14T20:25:00Z
+- **PRs checked:** 14
+- **Reviews posted:** 0
+- **Note:** 3 new PRs (#2091, #2092, #2093) all dependabot bot PRs (actions/setup-node v6→v7) — skipped per bot filter. No other PRs updated since last reviews.
 
 ## Reviewed PRs
 
@@ -49,6 +49,9 @@
 
 | PR | Reason | Since |
 |----|--------|-------|
+| #2091 | Bot PR (dependabot) — actions/setup-node v6→v7, dependencies label | 2026-07-14T20:25:00Z |
+| #2092 | Bot PR (dependabot) — actions/setup-node v6→v7, dependencies label | 2026-07-14T20:25:00Z |
+| #2093 | Bot PR (dependabot) — actions/setup-node v6→v7, dependencies label | 2026-07-14T20:25:00Z |
 
 ## Review Queue
 
