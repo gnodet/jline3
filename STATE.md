@@ -2,9 +2,10 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-13T21:15:46Z
+- **Timestamp:** 2026-07-14T20:19:44Z
 - **PRs checked:** 11
 - **Reviews posted:** 1
+- **Note:** Re-reviewed #2076 after symlink hardening commit (6c78b20); flagged macOS CI failure in test assertion
 
 ## Reviewed PRs
 
@@ -27,7 +28,7 @@
 | #2073 | fix: look up openpty in libc.so.6 for glibc 2.34+ (backport) | gnodet | 2026-07-13T12:52:20Z | COMMENT | Own PR — faithful backport of #2071 to jline-3.x, identical 13-line insertion, correctly positioned without AIX block |
 | #2074 | fix: backport #2054 — drain buffered data before EOF in NonBlockingPumpInputStream | gnodet | 2026-07-13T15:09:46Z | COMMENT | Own PR — re-reviewed after SonarCloud fix; assertion-less test now properly verifies WARN-mode EOF behavior |
 | #2075 | fix: disable Read File command in nano restricted mode (backport #2055) | gnodet | 2026-07-13T15:26:50Z | COMMENT | Own PR — faithful backport of #2055, identical Nano.java changes, test adapted for Java 8 and 3.x conventions |
-| #2076 | fix: confine ConfigurationPath lookups to the config directory (backport #2045) | gnodet | 2026-07-13T15:34:31Z | COMMENT | Own PR — faithful backport of #2045, confine() security fix identical, all 6 tests adapted for Java 8 |
+| #2076 | fix: confine ConfigurationPath lookups to the config directory (backport #2045) | gnodet | 2026-07-14T20:19:44Z | COMMENT | Re-reviewed after symlink hardening commit (6c78b20); test getUserConfigStaysInsideUserConfig fails on macOS (toAbsolutePath vs toRealPath mismatch), inline suggestion posted |
 | #2078 | refactor: use try-with-resources in ExecHelper#waitAndCapture | gnodet | 2026-07-13T19:16:08Z | COMMENT | Own PR — clean try-with-resources conversion, correct semantics, minor close-order change inconsequential |
 | #2079 | refactor: use try-with-resources in ExecHelper#waitAndCapture | gnodet | 2026-07-13T19:40:42Z | COMMENT | Own PR — re-submission of closed #2078, identical diff from new branch, same try-with-resources refactoring |
 | #2080 | refactor: use try-with-resources in ExecHelper#waitAndCapture | gnodet | 2026-07-13T19:47:46Z | COMMENT | Own PR — third attempt at same refactoring (#2078/#2079 closed), identical diff, CI failures transient |
@@ -37,6 +38,10 @@
 | #2086 | refactor: modernize ExecHelper stream handling | gnodet | 2026-07-13T20:41:30Z | COMMENT | Own PR — seventh iteration, identical diff (hash 77c65b4c1), refactor: prefix, branch refactor/exechelper-modernize |
 | #2087 | cleanup: safer process stream handling in ExecHelper | gnodet | 2026-07-13T20:49:39Z | COMMENT | Own PR — eighth iteration, identical diff (hash 77c65b4c1), cleanup: prefix, branch cleanup/process-stream-safety |
 | #2088 | enhancement: adopt try-with-resources in ExecHelper | gnodet | 2026-07-13T21:15:46Z | COMMENT | Own PR — ninth iteration of ExecHelper try-with-resources refactoring, clean conversion, behavior-preserving |
+| #2089 | test: try-with-resources in ExecHelper | gnodet | 2026-07-13T22:13:05Z | COMMENT | Own PR — tenth iteration of ExecHelper try-with-resources; CI broken: `-Werror` fails on unreferenced `out` in try-with-resources. Suggested removing `out` from resource list and closing explicitly |
+| #2084 | chore: bump junit.version from 6.1.1 to 6.1.2 | dependabot | 2026-07-13T21:40:23Z | COMMENT | Clean Dependabot bump, test-scoped dep, all CI green, patch release (NoTestsDiscoveredException fix) |
+| #2085 | chore: bump junit.version from 6.1.1 to 6.1.2 | dependabot | 2026-07-13T21:40:30Z | COMMENT | Clean Dependabot bump to 4.0.x, same version change as #2084, all CI green |
+| #2090 | fix: check closed flag in PtyInputStream to prevent hang on empty input | gnodet | 2026-07-14T12:44:34Z | COMMENT | Own PR — fixes #2077, re-reviewed after follow-up commit: CountDownLatch replaces sleep, shared test helper extracted. LGTM pending CI |
 
 ## Skipped PRs
 
