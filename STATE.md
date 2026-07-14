@@ -2,10 +2,10 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-14T21:12:37Z
+- **Timestamp:** 2026-07-14T21:16:03Z
 - **PRs checked:** 14
 - **Reviews posted:** 1
-- **Note:** Re-reviewed #2045 after symlink hardening commit (5246585c); same toAbsolutePath vs toRealPath test bug as backport #2076, inline suggestion posted
+- **Note:** Re-reviewed #2076 after author applied toRealPath() test fix (7ee3d99); CI all green, confirmed fix correct
 
 ## Reviewed PRs
 
@@ -28,7 +28,7 @@
 | #2073 | fix: look up openpty in libc.so.6 for glibc 2.34+ (backport) | gnodet | 2026-07-13T12:52:20Z | COMMENT | Own PR — faithful backport of #2071 to jline-3.x, identical 13-line insertion, correctly positioned without AIX block |
 | #2074 | fix: backport #2054 — drain buffered data before EOF in NonBlockingPumpInputStream | gnodet | 2026-07-13T15:09:46Z | COMMENT | Own PR — re-reviewed after SonarCloud fix; assertion-less test now properly verifies WARN-mode EOF behavior |
 | #2075 | fix: disable Read File command in nano restricted mode (backport #2055) | gnodet | 2026-07-13T15:26:50Z | COMMENT | Own PR — faithful backport of #2055, identical Nano.java changes, test adapted for Java 8 and 3.x conventions |
-| #2076 | fix: confine ConfigurationPath lookups to the config directory (backport #2045) | gnodet | 2026-07-14T20:19:44Z | COMMENT | Re-reviewed after symlink hardening commit (6c78b20); test getUserConfigStaysInsideUserConfig fails on macOS (toAbsolutePath vs toRealPath mismatch), inline suggestion posted |
+| #2076 | fix: confine ConfigurationPath lookups to the config directory (backport #2045) | gnodet | 2026-07-14T21:16:03Z | COMMENT | Author applied toRealPath() test fix (7ee3d99); CI all green across macOS/Ubuntu/Windows, confine() implementation correct |
 | #2078 | refactor: use try-with-resources in ExecHelper#waitAndCapture | gnodet | 2026-07-13T19:16:08Z | COMMENT | Own PR — clean try-with-resources conversion, correct semantics, minor close-order change inconsequential |
 | #2079 | refactor: use try-with-resources in ExecHelper#waitAndCapture | gnodet | 2026-07-13T19:40:42Z | COMMENT | Own PR — re-submission of closed #2078, identical diff from new branch, same try-with-resources refactoring |
 | #2080 | refactor: use try-with-resources in ExecHelper#waitAndCapture | gnodet | 2026-07-13T19:47:46Z | COMMENT | Own PR — third attempt at same refactoring (#2078/#2079 closed), identical diff, CI failures transient |
