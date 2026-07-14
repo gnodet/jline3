@@ -2,10 +2,10 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-14T22:03:00Z
+- **Timestamp:** 2026-07-14T22:07:40Z
 - **PRs checked:** 14
-- **Reviews posted:** 0
-- **Note:** #2045 author replied to review (comment only, no new code); test assertion fix not yet applied, CI still red. No other PRs updated.
+- **Reviews posted:** 1
+- **Note:** #2045 author applied toRealPath() test fix (6c50d99); CI passing on macOS and Ubuntu, approved on GitHub
 
 ## Reviewed PRs
 
@@ -14,7 +14,7 @@
 | PR | Title | Author | Reviewed | Verdict | Notes |
 |----|-------|--------|----------|---------|-------|
 | #2053 | fix: guard styleMatches and highlighter rules against ReDoS | uchiha-bug-hunter | 2026-07-11T06:46:29Z | APPROVE | Re-reviewed; all 3 concerns addressed: catch block resets state, continueAs precompiled, multi-group test added. Approved on GitHub |
-| #2045 | fix: confine ConfigurationPath lookups to the config directory | uchiha-bug-hunter | 2026-07-14T21:12:37Z | COMMENT | Re-reviewed after symlink hardening commit (5246585c); test getUserConfigStaysInsideUserConfig fails on macOS (toAbsolutePath vs toRealPath mismatch), inline suggestion posted — same issue as backport #2076 |
+| #2045 | fix: confine ConfigurationPath lookups to the config directory | uchiha-bug-hunter | 2026-07-14T22:07:40Z | APPROVE | Author applied toRealPath() test fix (6c50d99); CI passing on macOS and Ubuntu, approved on GitHub |
 | #2055 | fix: disable Read File command in nano restricted mode | uchiha-bug-hunter | 2026-07-10T10:23:18Z | APPROVE | Re-reviewed; author addressed ^R shortcut suggestion, both commits correct |
 | #2007 | feat: add Kitty Keyboard Protocol support | gnodet | 2026-07-10T08:24:29Z | APPROVE | Re-reviewed after force-push; keyCode nit fixed (passes 0 for legacy events) |
 | #2052 | fix: only read local jar: archives in PosixCommands getSources | uchiha-bug-hunter | 2026-07-11T17:03:53Z | APPROVE | Re-reviewed; Windows CI fix (jar URL caching disabled in tests) correct, isLocalJarFile() hardening sound, all CI green |
