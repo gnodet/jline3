@@ -2,10 +2,10 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-14T22:15:00Z
-- **PRs checked:** 14
-- **Reviews posted:** 0
-- **Note:** No new activity — all open PRs already reviewed or skipped, no new commits since last reviews
+- **Timestamp:** 2026-07-15T08:07:04Z
+- **PRs checked:** 15
+- **Reviews posted:** 1
+- **Note:** Reviewed new PR #2094 (chore: remove 4.0.x from Dependabot config); clean config-only deletion, LGTM
 
 ## Reviewed PRs
 
@@ -41,6 +41,7 @@
 | #2089 | test: try-with-resources in ExecHelper | gnodet | 2026-07-13T22:13:05Z | COMMENT | Own PR — tenth iteration of ExecHelper try-with-resources; CI broken: `-Werror` fails on unreferenced `out` in try-with-resources. Suggested removing `out` from resource list and closing explicitly |
 | #2084 | chore: bump junit.version from 6.1.1 to 6.1.2 | dependabot | 2026-07-13T21:40:23Z | COMMENT | Clean Dependabot bump, test-scoped dep, all CI green, patch release (NoTestsDiscoveredException fix) |
 | #2085 | chore: bump junit.version from 6.1.1 to 6.1.2 | dependabot | 2026-07-13T21:40:30Z | COMMENT | Clean Dependabot bump to 4.0.x, same version change as #2084, all CI green |
+| #2094 | chore: remove 4.0.x from Dependabot configuration | gnodet | 2026-07-15T08:07:04Z | COMMENT | Own PR — clean removal of 4.0.x dependabot entries (maven + github-actions); bumps land on master and get cherry-picked |
 | #2090 | fix: check closed flag in PtyInputStream to prevent hang on empty input | gnodet | 2026-07-14T12:44:34Z | COMMENT | Own PR — fixes #2077, re-reviewed after follow-up commit: CountDownLatch replaces sleep, shared test helper extracted. LGTM pending CI |
 
 ## Skipped PRs
