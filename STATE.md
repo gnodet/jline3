@@ -2,10 +2,10 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-15T14:10:00Z
+- **Timestamp:** 2026-07-15T15:33:00Z
 - **PRs checked:** 6
-- **Reviews posted:** 0
-- **Note:** No-op run. Drift sync on #2095, #2090, #2021 (no new commits/comments, updatedAt moved by own activity). Many tracked PRs now merged: #2045, #2055, #2071–#2076, #2084, #2094. ExecHelper iterations #2078–#2089 all closed.
+- **Reviews posted:** 1
+- **Note:** Re-reviewed #2090 after new commit (2026-07-15T12:42:23Z); posted COMMENT review — LGTM, closed-flag check correctly placed after in.read()
 
 ## Reviewed PRs
 
@@ -43,7 +43,7 @@
 | #2085 | chore: bump junit.version from 6.1.1 to 6.1.2 | dependabot | 2026-07-13T21:40:30Z | COMMENT | Clean Dependabot bump to 4.0.x, same version change as #2084, all CI green |
 | #2094 | chore: remove 4.0.x from Dependabot configuration | gnodet | 2026-07-15T08:07:04Z | COMMENT | Own PR — clean removal of 4.0.x dependabot entries (maven + github-actions); bumps land on master and get cherry-picked |
 | #2095 | fix: backport SSRF fix to 3.x — use Path.resolve in cat and sort | gnodet | 2026-07-15T11:49:00Z | COMMENT | Own PR — clean security backport of #2052 to jline-3.x; 2-line fix, 4 SSRF regression tests. LGTM |
-| #2090 | fix: check closed flag in PtyInputStream to prevent hang on empty input | gnodet | 2026-07-14T12:44:34Z | COMMENT | Own PR — fixes #2077, re-reviewed after follow-up commit: CountDownLatch replaces sleep, shared test helper extracted. LGTM pending CI |
+| #2090 | fix: check closed flag in PtyInputStream to prevent hang on empty input | gnodet | 2026-07-15T15:33:42Z | COMMENT | Own PR — re-reviewed after 3rd commit: closed-flag check moved after in.read() to drain buffered data. LGTM, all CI green |
 
 ## Skipped PRs
 
