@@ -2,10 +2,10 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-15T09:07:00Z
-- **PRs checked:** 5
-- **Reviews posted:** 0
-- **Note:** Drift sync — #2021 updatedAt moved by own review posting; no new commits on any open PR
+- **Timestamp:** 2026-07-15T11:49:00Z
+- **PRs checked:** 6
+- **Reviews posted:** 1
+- **Note:** Reviewed new PR #2095 (SSRF backport to jline-3.x); clean security fix, LGTM (own PR)
 
 ## Reviewed PRs
 
@@ -42,6 +42,7 @@
 | #2084 | chore: bump junit.version from 6.1.1 to 6.1.2 | dependabot | 2026-07-13T21:40:23Z | COMMENT | Clean Dependabot bump, test-scoped dep, all CI green, patch release (NoTestsDiscoveredException fix) |
 | #2085 | chore: bump junit.version from 6.1.1 to 6.1.2 | dependabot | 2026-07-13T21:40:30Z | COMMENT | Clean Dependabot bump to 4.0.x, same version change as #2084, all CI green |
 | #2094 | chore: remove 4.0.x from Dependabot configuration | gnodet | 2026-07-15T08:07:04Z | COMMENT | Own PR — clean removal of 4.0.x dependabot entries (maven + github-actions); bumps land on master and get cherry-picked |
+| #2095 | fix: backport SSRF fix to 3.x — use Path.resolve in cat and sort | gnodet | 2026-07-15T11:49:00Z | COMMENT | Own PR — clean security backport of #2052 to jline-3.x; 2-line fix, 4 SSRF regression tests. LGTM |
 | #2090 | fix: check closed flag in PtyInputStream to prevent hang on empty input | gnodet | 2026-07-14T12:44:34Z | COMMENT | Own PR — fixes #2077, re-reviewed after follow-up commit: CountDownLatch replaces sleep, shared test helper extracted. LGTM pending CI |
 
 ## Skipped PRs
