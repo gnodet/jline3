@@ -2,10 +2,10 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-15T08:08:00Z
+- **Timestamp:** 2026-07-15T09:01:00Z
 - **PRs checked:** 6
-- **Reviews posted:** 0
-- **Note:** Drift sync — #2094 updatedAt moved by own review posting; no new commits on any open PR
+- **Reviews posted:** 1
+- **Note:** Re-reviewed #2021 after new commit 478d742 (drain-to-'t' fix, API contract alignment, new widget tests); COMMENT (own PR). #2090 drift only (no new commits)
 
 ## Reviewed PRs
 
@@ -19,7 +19,7 @@
 | #2007 | feat: add Kitty Keyboard Protocol support | gnodet | 2026-07-10T08:24:29Z | APPROVE | Re-reviewed after force-push; keyCode nit fixed (passes 0 for legacy events) |
 | #2052 | fix: only read local jar: archives in PosixCommands getSources | uchiha-bug-hunter | 2026-07-11T17:03:53Z | APPROVE | Re-reviewed; Windows CI fix (jar URL caching disabled in tests) correct, isLocalJarFile() hardening sound, all CI green |
 | #2020 | feat: change default of softwareSignals to false and deprecate | gnodet | 2026-07-09T22:53:15Z | APPROVE | LGTM; consistent default change, proper deprecation annotations, good test coverage |
-| #2021 | feat: support in-band window resize notifications (mode 2048) | gnodet | 2026-07-09T22:53:20Z | APPROVE | LGTM; mirrors hasFocusSupport/trackFocus pattern, correct Size.of argument order |
+| #2021 | feat: support in-band window resize notifications (mode 2048) | gnodet | 2026-07-15T09:01:00Z | COMMENT | Re-reviewed after 478d742: drain-to-'t' fix, API contract alignment, @since tags, 5 new widget tests. LGTM (own PR) |
 | #2063 | fix: drain buffered data before signaling EOF in NonBlockingPumpInputStream | gnodet | 2026-07-10T08:24:22Z | APPROVE | Re-reviewed after CountDownLatch sync; Thread.onSpinWait replaced, all CI green |
 | #2065 | feat: allow customizing the help source in Less pager (fixes #2056) | gnodet | 2026-07-10T00:42:27Z | APPROVE | LGTM; clean feature, follows defaultPrompt() pattern, backward-compatible |
 | #2069 | fix: propagate EOF in PtyInputStream to avoid infinite loop (#1961, #1963) | thomasrebele | 2026-07-13T11:38:44Z | APPROVE | Clean backport of EOF fix from master to jline-3.x; 50ms timing heuristic correct, nanoTime improvement, good test coverage |
