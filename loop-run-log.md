@@ -33,3 +33,16 @@ Append one entry per run. Prune entries older than 30 days.
   "outcome": "report-only"
 }
 ```
+
+```json
+{
+  "run_id": "2026-07-15T14:10:00Z",
+  "pattern": "pr-babysitter",
+  "duration_s": 30,
+  "items_found": 6,
+  "actions_taken": 0,
+  "escalations": 0,
+  "tokens_estimate": 15000,
+  "outcome": "no-op"
+}
+```
