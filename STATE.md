@@ -2,10 +2,10 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-15T09:01:00Z
-- **PRs checked:** 6
-- **Reviews posted:** 1
-- **Note:** Re-reviewed #2021 after new commit 478d742 (drain-to-'t' fix, API contract alignment, new widget tests); COMMENT (own PR). #2090 drift only (no new commits)
+- **Timestamp:** 2026-07-15T09:07:00Z
+- **PRs checked:** 5
+- **Reviews posted:** 0
+- **Note:** Drift sync — #2021 updatedAt moved by own review posting; no new commits on any open PR
 
 ## Reviewed PRs
 
