@@ -2,10 +2,10 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-16T14:30:59Z
-- **PRs checked:** 3
+- **Timestamp:** 2026-07-16T17:25:48Z
+- **PRs checked:** 1
 - **Reviews posted:** 1
-- **Note:** Reviewed PR #2099 (security fix: strip OSC/DCS/SOS/PM/APC escape sequences in ansiAppend). Posted COMMENT with two low-severity suggestions. Skipped #2097, #2098 (dependabot).
+- **Note:** Re-reviewed PR #2099 after author addressed both suggestions in 84bba0f. Upgraded COMMENT → APPROVE.
 
 ## Reviewed PRs
 
@@ -44,7 +44,7 @@
 | #2094 | chore: remove 4.0.x from Dependabot configuration | gnodet | 2026-07-15T08:07:04Z | COMMENT | Own PR — clean removal of 4.0.x dependabot entries (maven + github-actions); bumps land on master and get cherry-picked |
 | #2095 | fix: backport SSRF fix to 3.x — use Path.resolve in cat and sort | gnodet | 2026-07-15T11:49:00Z | COMMENT | Own PR — clean security backport of #2052 to jline-3.x; 2-line fix, 4 SSRF regression tests. LGTM |
 | #2090 | fix: check closed flag in PtyInputStream to prevent hang on empty input | gnodet | 2026-07-15T15:33:42Z | COMMENT | Own PR — re-reviewed after 3rd commit: closed-flag check moved after in.read() to drain buffered data. LGTM, all CI green |
-| #2099 | fix: strip OSC and other escape sequences in ansiAppend | uchiha-bug-hunter | 2026-07-16T14:30:59Z | COMMENT | Security fix — state machine extended to consume OSC/DCS/SOS/PM/APC payloads. Two minor suggestions: comment precision on ST terminator handling, additional SOS/PM/unterminated test cases |
+| #2099 | fix: strip OSC and other escape sequences in ansiAppend | uchiha-bug-hunter | 2026-07-16T17:25:48Z | APPROVE | Security fix — both suggestions addressed in 84bba0f: ST comment clarified, SOS/PM/unterminated tests added. LGTM |
 
 ## Skipped PRs
 
