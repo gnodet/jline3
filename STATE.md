@@ -2,10 +2,10 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-16T22:05:00Z
+- **Timestamp:** 2026-07-16T22:10:00Z
 - **PRs checked:** 1
 - **Reviews posted:** 1
-- **Note:** Re-reviewed PR #2100 after ffd0bce — all 3 findings addressed (narrowed try-catch, descending sort, ProcessBuilder). LGTM.
+- **Note:** Re-reviewed PR #2100 after 28fee91 — absolute path for uname (SonarCloud S4036 fix). Clean, SonarCloud passing.
 
 ## Reviewed PRs
 
@@ -45,7 +45,7 @@
 | #2095 | fix: backport SSRF fix to 3.x — use Path.resolve in cat and sort | gnodet | 2026-07-15T11:49:00Z | COMMENT | Own PR — clean security backport of #2052 to jline-3.x; 2-line fix, 4 SSRF regression tests. LGTM |
 | #2090 | fix: check closed flag in PtyInputStream to prevent hang on empty input | gnodet | 2026-07-15T15:33:42Z | COMMENT | Own PR — re-reviewed after 3rd commit: closed-flag check moved after in.read() to drain buffered data. LGTM, all CI green |
 | #2099 | fix: strip OSC and other escape sequences in ansiAppend | uchiha-bug-hunter | 2026-07-16T17:25:48Z | APPROVE | Security fix — both suggestions addressed in 84bba0f: ST comment clarified, SOS/PM/unterminated tests added. LGTM |
-| #2100 | fix: search multiple lib paths for versioned libutil.so | gnodet | 2026-07-16T22:05:00Z | COMMENT | Own PR — re-reviewed after ffd0bce: all 3 findings addressed (narrowed try-catch scope, descending sort, ProcessBuilder). LGTM |
+| #2100 | fix: search multiple lib paths for versioned libutil.so | gnodet | 2026-07-16T22:10:00Z | COMMENT | Own PR — re-reviewed after 28fee91: absolute path for uname (SonarCloud S4036). All prior findings addressed, SonarCloud passing. LGTM |
 
 ## Skipped PRs
 
