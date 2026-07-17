@@ -2,10 +2,10 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-16T22:10:00Z
+- **Timestamp:** 2026-07-17T06:00:00Z
 - **PRs checked:** 1
 - **Reviews posted:** 1
-- **Note:** Re-reviewed PR #2100 after 28fee91 — absolute path for uname (SonarCloud S4036 fix). Clean, SonarCloud passing.
+- **Note:** Reviewed PR #2101 (own PR — backport of #2100 + #2099 to jline-3.x). Clean, faithful backport, all CI green. LGTM.
 
 ## Reviewed PRs
 
@@ -46,6 +46,7 @@
 | #2090 | fix: check closed flag in PtyInputStream to prevent hang on empty input | gnodet | 2026-07-15T15:33:42Z | COMMENT | Own PR — re-reviewed after 3rd commit: closed-flag check moved after in.read() to drain buffered data. LGTM, all CI green |
 | #2099 | fix: strip OSC and other escape sequences in ansiAppend | uchiha-bug-hunter | 2026-07-16T17:25:48Z | APPROVE | Security fix — both suggestions addressed in 84bba0f: ST comment clarified, SOS/PM/unterminated tests added. LGTM |
 | #2100 | fix: search multiple lib paths for versioned libutil.so | gnodet | 2026-07-16T22:10:00Z | COMMENT | Own PR — re-reviewed after 28fee91: absolute path for uname (SonarCloud S4036). All prior findings addressed, SonarCloud passing. LGTM |
+| #2101 | fix: backport libutil search paths and OSC stripping to 3.x (#2100, #2099) | gnodet | 2026-07-17T06:00:00Z | COMMENT | Own PR — clean backport of #2100 + #2099 to jline-3.x. Paths.get() for Java 8, state machine identical to master, comprehensive tests. All CI green. LGTM |
 
 ## Skipped PRs
 
