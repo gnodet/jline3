@@ -2,10 +2,10 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-17T06:50:00Z
+- **Timestamp:** 2026-07-17T07:00:00Z
 - **PRs checked:** 2
 - **Reviews posted:** 2
-- **Note:** Reviewed PRs #2102 and #2103 (split backports from closed #2101). Both LGTM.
+- **Note:** Re-reviewed PRs #2100 and #2102 after S2142 fix (InterruptedException re-interrupt). Both LGTM.
 
 ## Reviewed PRs
 
@@ -45,9 +45,9 @@
 | #2095 | fix: backport SSRF fix to 3.x — use Path.resolve in cat and sort | gnodet | 2026-07-15T11:49:00Z | COMMENT | Own PR — clean security backport of #2052 to jline-3.x; 2-line fix, 4 SSRF regression tests. LGTM |
 | #2090 | fix: check closed flag in PtyInputStream to prevent hang on empty input | gnodet | 2026-07-15T15:33:42Z | COMMENT | Own PR — re-reviewed after 3rd commit: closed-flag check moved after in.read() to drain buffered data. LGTM, all CI green |
 | #2099 | fix: strip OSC and other escape sequences in ansiAppend | uchiha-bug-hunter | 2026-07-16T17:25:48Z | APPROVE | Security fix — both suggestions addressed in 84bba0f: ST comment clarified, SOS/PM/unterminated tests added. LGTM |
-| #2100 | fix: search multiple lib paths for versioned libutil.so | gnodet | 2026-07-16T22:10:00Z | COMMENT | Own PR — re-reviewed after 28fee91: absolute path for uname (SonarCloud S4036). All prior findings addressed, SonarCloud passing. LGTM |
+| #2100 | fix: search multiple lib paths for versioned libutil.so | gnodet | 2026-07-17T07:00:00Z | COMMENT | Own PR — re-reviewed after 82d0b66: catch Exception + S2142 InterruptedException re-interrupt. LGTM |
 | #2101 | fix: backport libutil search paths and OSC stripping to 3.x (#2100, #2099) | gnodet | 2026-07-17T06:00:00Z | COMMENT | Own PR — CLOSED, split into #2102 + #2103. Was clean backport, all CI green |
-| #2102 | fix: backport libutil search paths to 3.x (#2100) | gnodet | 2026-07-17T06:50:00Z | COMMENT | Own PR — split from #2101. findVersionedLibutil() with Paths.get(), uname catch narrowed to Exception. LGTM |
+| #2102 | fix: backport libutil search paths to 3.x (#2100) | gnodet | 2026-07-17T07:00:00Z | COMMENT | Own PR — re-reviewed after 4364c2f: S2142 InterruptedException re-interrupt. LGTM |
 | #2103 | fix: backport OSC/DCS/SOS/PM/APC escape stripping to 3.x (#2099) | gnodet | 2026-07-17T06:50:00Z | COMMENT | Own PR — split from #2101. State machine + 4 tests identical to master. All CI green. LGTM |
 
 ## Skipped PRs
