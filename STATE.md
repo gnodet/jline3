@@ -2,10 +2,10 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-17T07:00:00Z
+- **Timestamp:** 2026-07-18T04:20:00Z
 - **PRs checked:** 2
-- **Reviews posted:** 2
-- **Note:** Re-reviewed PRs #2100 and #2102 after S2142 fix (InterruptedException re-interrupt). Both LGTM.
+- **Reviews posted:** 1
+- **Note:** Reviewed PR #2105 (uchiha-bug-hunter — OSC color hex length validation). APPROVED. Skipped #2104 (dependabot).
 
 ## Reviewed PRs
 
@@ -49,6 +49,7 @@
 | #2101 | fix: backport libutil search paths and OSC stripping to 3.x (#2100, #2099) | gnodet | 2026-07-17T06:00:00Z | COMMENT | Own PR — CLOSED, split into #2102 + #2103. Was clean backport, all CI green |
 | #2102 | fix: backport libutil search paths to 3.x (#2100) | gnodet | 2026-07-17T07:00:00Z | COMMENT | Own PR — re-reviewed after 4364c2f: S2142 InterruptedException re-interrupt. LGTM |
 | #2103 | fix: backport OSC/DCS/SOS/PM/APC escape stripping to 3.x (#2099) | gnodet | 2026-07-17T06:50:00Z | COMMENT | Own PR — split from #2101. State machine + 4 tests identical to master. All CI green. LGTM |
+| #2105 | fix: reject overlong hex components in OSC color responses | uchiha-bug-hunter | 2026-07-18T04:20:00Z | APPROVE | Correct fix for int shift wrap in OSC color parsing. Both ColorSupport and ColorPalette paths protected. Good tests. Approved on GitHub |
 
 ## Skipped PRs
 
@@ -61,6 +62,7 @@
 | #2093 | Bot PR (dependabot) — actions/setup-node v6→v7, dependencies label | 2026-07-14T20:25:00Z |
 | #2097 | Bot PR (dependabot) — ivy 2.5.3→2.6.0 (master), dependencies label | 2026-07-16T14:30:59Z |
 | #2098 | Bot PR (dependabot) — ivy 2.5.3→2.6.0 (jline-3.x), dependencies label | 2026-07-16T14:30:59Z |
+| #2104 | Bot PR (dependabot) — native-maven-plugin 1.1.4→1.1.5 (master), dependencies label | 2026-07-17T20:24:39Z |
 
 ## Review Queue
 
