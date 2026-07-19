@@ -2,10 +2,10 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-18T04:20:00Z
-- **PRs checked:** 2
+- **Timestamp:** 2026-07-19T20:49:00Z
+- **PRs checked:** 1
 - **Reviews posted:** 1
-- **Note:** Reviewed PR #2105 (uchiha-bug-hunter — OSC color hex length validation). APPROVED. Skipped #2104 (dependabot).
+- **Note:** Reviewed PR #2106 (uchiha-bug-hunter — SSH agent forwarding opt-in). APPROVED.
 
 ## Reviewed PRs
 
@@ -50,6 +50,7 @@
 | #2102 | fix: backport libutil search paths to 3.x (#2100) | gnodet | 2026-07-17T07:00:00Z | COMMENT | Own PR — re-reviewed after 4364c2f: S2142 InterruptedException re-interrupt. LGTM |
 | #2103 | fix: backport OSC/DCS/SOS/PM/APC escape stripping to 3.x (#2099) | gnodet | 2026-07-17T06:50:00Z | COMMENT | Own PR — split from #2101. State machine + 4 tests identical to master. All CI green. LGTM |
 | #2105 | fix: reject overlong hex components in OSC color responses | uchiha-bug-hunter | 2026-07-18T04:20:00Z | APPROVE | Correct fix for int shift wrap in OSC color parsing. Both ColorSupport and ColorPalette paths protected. Good tests. Approved on GitHub |
+| #2106 | fix: only forward the ssh agent when -A is given | uchiha-bug-hunter | 2026-07-19T20:49:00Z | APPROVE | Security fix — gates SSH agent forwarding behind -A opt-in flag, matching OpenSSH default. Minimal diff, excellent in-process server test. Approved on GitHub |
 
 ## Skipped PRs
 
