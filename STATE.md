@@ -2,10 +2,10 @@
 
 ## Last Run
 
-- **Timestamp:** 2026-07-20T10:56:00Z
+- **Timestamp:** 2026-07-20T14:16:00Z
 - **PRs checked:** 1
 - **Reviews posted:** 1
-- **Note:** Re-reviewed PR #2106 after author applied both suggestions (one-liner + @Timeout). Re-APPROVED.
+- **Note:** Reviewed PR #2107 (uchiha-bug-hunter — truecolor SGR component clamping). APPROVED.
 
 ## Reviewed PRs
 
@@ -51,6 +51,7 @@
 | #2103 | fix: backport OSC/DCS/SOS/PM/APC escape stripping to 3.x (#2099) | gnodet | 2026-07-17T06:50:00Z | COMMENT | Own PR — split from #2101. State machine + 4 tests identical to master. All CI green. LGTM |
 | #2105 | fix: reject overlong hex components in OSC color responses | uchiha-bug-hunter | 2026-07-18T04:20:00Z | APPROVE | Correct fix for int shift wrap in OSC color parsing. Both ColorSupport and ColorPalette paths protected. Good tests. Approved on GitHub |
 | #2106 | fix: only forward the ssh agent when -A is given | uchiha-bug-hunter | 2026-07-20T10:56:00Z | APPROVE | Security fix — gates SSH agent forwarding behind -A opt-in. Re-reviewed after author applied both suggestions (one-liner, @Timeout). Re-approved on GitHub |
+| #2107 | fix: clamp out-of-range truecolor SGR components in ScreenTerminal | uchiha-bug-hunter | 2026-07-20T14:16:00Z | APPROVE | Bit-overflow fix: unclamped truecolor r/g/b values > 255 overflowed 12-bit color field and corrupted adjacent style bits. Math.max/min clamp at both sites. Good test. Approved on GitHub |
 
 ## Skipped PRs
 
