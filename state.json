@@ -3,8 +3,62 @@
   "project": "jline/jline3",
   "project_name": "JLine3",
   "loop_type": "review-loop",
-  "last_run": null,
-  "reviewed_prs": [],
+  "last_run": {
+    "timestamp": "2026-07-22T15:30:23Z",
+    "prs_checked": 3,
+    "reviews_posted": 3,
+    "tokens_estimate": 0
+  },
+  "reviewed_prs": [
+    {
+      "number": 2007,
+      "title": "feat: add Kitty Keyboard Protocol support",
+      "author": "gnodet",
+      "reviewed_at": "2026-07-22T15:30:23Z",
+      "verdict": "COMMENT",
+      "notes": "PUA codepoint mismatch for HOME/END keys (verified against kitty spec)",
+      "interactions": [
+        {
+          "at": "2026-07-22T15:30:23Z",
+          "verdict": "COMMENT",
+          "notes": "PUA codepoint mismatch for HOME/END keys (verified against kitty spec)"
+        }
+      ],
+      "review_count": 1
+    },
+    {
+      "number": 2021,
+      "title": "feat: support in-band window resize notifications (mode 2048)",
+      "author": "gnodet",
+      "reviewed_at": "2026-07-22T15:30:23Z",
+      "verdict": "APPROVE",
+      "notes": "LGTM - clean implementation following existing patterns",
+      "interactions": [
+        {
+          "at": "2026-07-22T15:30:23Z",
+          "verdict": "APPROVE",
+          "notes": "LGTM - clean implementation following existing patterns"
+        }
+      ],
+      "review_count": 1
+    },
+    {
+      "number": 2020,
+      "title": "feat: change default of softwareSignals to false and deprecate",
+      "author": "gnodet",
+      "reviewed_at": "2026-07-22T15:30:23Z",
+      "verdict": "APPROVE",
+      "notes": "LGTM - consistent default change with proper deprecation",
+      "interactions": [
+        {
+          "at": "2026-07-22T15:30:23Z",
+          "verdict": "APPROVE",
+          "notes": "LGTM - consistent default change with proper deprecation"
+        }
+      ],
+      "review_count": 1
+    }
+  ],
   "skipped_prs": [],
   "review_queue": [],
   "active_failures": [],
