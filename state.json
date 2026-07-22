@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "project": "jline/jline3",
+  "project_name": "JLine3",
+  "loop_type": "review-loop",
+  "last_run": null,
+  "reviewed_prs": [],
+  "skipped_prs": [],
+  "review_queue": [],
+  "active_failures": [],
+  "escalated": [],
+  "resolved": [],
+  "created_at": "2026-07-22T15:18:23Z"
+}
