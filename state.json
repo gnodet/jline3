@@ -4,8 +4,8 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-07-22T17:05:28Z",
-    "prs_checked": 0,
+    "timestamp": "2026-07-23T09:32:00Z",
+    "prs_checked": 4,
     "reviews_posted": 0,
     "tokens_estimate": 0
   },
@@ -75,7 +75,28 @@
       "review_count": 1
     }
   ],
-  "skipped_prs": [],
+  "skipped_prs": [
+    {
+      "number": 2113,
+      "reason": "bot: dependabot",
+      "since": "2026-07-23T09:32:00Z"
+    },
+    {
+      "number": 2114,
+      "reason": "bot: dependabot",
+      "since": "2026-07-23T09:32:00Z"
+    },
+    {
+      "number": 2115,
+      "reason": "bot: dependabot",
+      "since": "2026-07-23T09:32:00Z"
+    },
+    {
+      "number": 2116,
+      "reason": "bot: dependabot",
+      "since": "2026-07-23T09:32:00Z"
+    }
+  ],
   "review_queue": [],
   "active_failures": [],
   "escalated": [],
