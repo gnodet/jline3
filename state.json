@@ -4,10 +4,10 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-07-27T09:55:42Z",
-    "prs_checked": 0,
-    "reviews_posted": 0,
-    "tokens_estimate": 0
+    "timestamp": "2026-07-27T12:03:42Z",
+    "prs_checked": 1,
+    "reviews_posted": 1,
+    "tokens_estimate": 54000
   },
   "reviewed_prs": [
     {
@@ -94,9 +94,9 @@
       "number": 2119,
       "title": "fix: improve provider discovery for custom classloader environments",
       "author": "gnodet",
-      "reviewed_at": "2026-07-27T09:54:47Z",
+      "reviewed_at": "2026-07-27T12:03:41Z",
       "verdict": "APPROVE",
-      "notes": "Re-review v4: trivial SonarCloud S1130 cleanup, no logic changes",
+      "notes": "Re-review v5: classloader dedup added (identity comparison, null-safe, correct priority)",
       "interactions": [
         {
           "at": "2026-07-27T09:25:08Z",
@@ -117,9 +117,14 @@
           "at": "2026-07-27T09:54:47Z",
           "verdict": "APPROVE",
           "notes": "Re-review v4: trivial SonarCloud S1130 cleanup, no logic changes"
+        },
+        {
+          "at": "2026-07-27T12:03:41Z",
+          "verdict": "APPROVE",
+          "notes": "Re-review v5: classloader dedup added (identity comparison, null-safe, correct priority)"
         }
       ],
-      "review_count": 4
+      "review_count": 5
     },
     {
       "number": 2120,
@@ -165,5 +170,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-07-27T09:52:22Z"
+  "last_reviewed_updated_at": "2026-07-27T12:01:06Z"
 }
