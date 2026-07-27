@@ -4,10 +4,10 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-07-27T09:40:38Z",
-    "prs_checked": 0,
-    "reviews_posted": 0,
-    "tokens_estimate": 0
+    "timestamp": "2026-07-27T09:47:00Z",
+    "prs_checked": 1,
+    "reviews_posted": 1,
+    "tokens_estimate": 65000
   },
   "reviewed_prs": [
     {
@@ -94,9 +94,9 @@
       "number": 2119,
       "title": "fix: improve provider discovery for custom classloader environments",
       "author": "gnodet",
-      "reviewed_at": "2026-07-27T09:38:18Z",
+      "reviewed_at": "2026-07-27T09:47:00Z",
       "verdict": "APPROVE",
-      "notes": "Re-review after new commits: tests added, still LGTM",
+      "notes": "Re-review v3: author addressed feedback, tryLoadProvider extraction, error msg fix",
       "interactions": [
         {
           "at": "2026-07-27T09:25:08Z",
@@ -107,9 +107,14 @@
           "at": "2026-07-27T09:38:18Z",
           "verdict": "APPROVE",
           "notes": "Re-review after new commits: tests added, still LGTM"
+        },
+        {
+          "at": "2026-07-27T09:47:00Z",
+          "verdict": "APPROVE",
+          "notes": "Re-review v3: author addressed feedback, tryLoadProvider extraction, error msg fix"
         }
       ],
-      "review_count": 2
+      "review_count": 3
     },
     {
       "number": 2120,
@@ -155,5 +160,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-07-27T09:31:56Z"
+  "last_reviewed_updated_at": "2026-07-27T09:42:51Z"
 }
