@@ -4,10 +4,10 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-07-27T12:53:25Z",
-    "prs_checked": 0,
+    "timestamp": "2026-07-27T12:55:38Z",
+    "prs_checked": 1,
     "reviews_posted": 0,
-    "tokens_estimate": 0
+    "tokens_estimate": 5000
   },
   "reviewed_prs": [
     {
@@ -151,17 +151,22 @@
       "number": 2121,
       "title": "chore: clarify merge policy to require label, milestone, and assignee",
       "author": "gnodet",
-      "reviewed_at": "2026-07-27T12:52:19Z",
+      "reviewed_at": "2026-07-27T12:55:38Z",
       "verdict": "APPROVE",
-      "notes": "Clean docs improvement expanding merge policy into 3 explicit steps",
+      "notes": "Re-review: force-push/rebase only, identical diff, no new review posted",
       "interactions": [
         {
           "at": "2026-07-27T12:52:19Z",
           "verdict": "APPROVE",
           "notes": "Clean docs improvement expanding merge policy into 3 explicit steps"
+        },
+        {
+          "at": "2026-07-27T12:55:38Z",
+          "verdict": "APPROVE",
+          "notes": "Re-review: force-push/rebase only, identical diff, no new review posted"
         }
       ],
-      "review_count": 1
+      "review_count": 2
     }
   ],
   "skipped_prs": [
@@ -191,5 +196,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-07-27T12:50:39Z"
+  "last_reviewed_updated_at": "2026-07-27T12:54:53Z"
 }
