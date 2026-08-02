@@ -4,10 +4,10 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-02T17:48:03Z",
+    "timestamp": "2026-08-02T18:05:21Z",
     "prs_checked": 1,
-    "reviews_posted": 0,
-    "tokens_estimate": 1500
+    "reviews_posted": 1,
+    "tokens_estimate": 52000
   },
   "reviewed_prs": [
     {
@@ -269,9 +269,9 @@
       "number": 2136,
       "title": "fix: strip control characters from ssh banner and prompts (3.x backport)",
       "author": "gnodet",
-      "reviewed_at": "2026-08-02T17:48:01Z",
+      "reviewed_at": "2026-08-02T18:05:20Z",
       "verdict": "APPROVE",
-      "notes": "SonarCloud bot comment only (QG passed), no re-review needed",
+      "notes": "Re-review: Java 8 compat fix \u2014 toString(Charset) to toString(String) in test, no production code change",
       "interactions": [
         {
           "at": "2026-08-02T17:45:12Z",
@@ -282,9 +282,14 @@
           "at": "2026-08-02T17:48:01Z",
           "verdict": "APPROVE",
           "notes": "SonarCloud bot comment only (QG passed), no re-review needed"
+        },
+        {
+          "at": "2026-08-02T18:05:20Z",
+          "verdict": "APPROVE",
+          "notes": "Re-review: Java 8 compat fix \u2014 toString(Charset) to toString(String) in test, no production code change"
         }
       ],
-      "review_count": 2
+      "review_count": 3
     }
   ],
   "skipped_prs": [
@@ -314,5 +319,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-02T17:45:14Z"
+  "last_reviewed_updated_at": "2026-08-02T18:03:04Z"
 }
