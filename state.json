@@ -4,10 +4,10 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-02T19:24:28Z",
+    "timestamp": "2026-08-02T20:04:11Z",
     "prs_checked": 1,
-    "reviews_posted": 0,
-    "tokens_estimate": 1500
+    "reviews_posted": 1,
+    "tokens_estimate": 120000
   },
   "reviewed_prs": [
     {
@@ -295,6 +295,22 @@
         }
       ],
       "review_count": 3
+    },
+    {
+      "number": 2137,
+      "title": "fix: backport security fixes to 3.x (path traversal + DSR plain text)",
+      "author": "gnodet",
+      "reviewed_at": "2026-08-02T20:04:10Z",
+      "verdict": "APPROVE",
+      "notes": "Clean backport of #2112 (path traversal) + #2128 (DSR plain text) to jline-3.x, Java 8 compat verified",
+      "interactions": [
+        {
+          "at": "2026-08-02T20:04:10Z",
+          "verdict": "APPROVE",
+          "notes": "Clean backport of #2112 (path traversal) + #2128 (DSR plain text) to jline-3.x, Java 8 compat verified"
+        }
+      ],
+      "review_count": 1
     }
   ],
   "skipped_prs": [
@@ -324,5 +340,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-02T19:22:57Z"
+  "last_reviewed_updated_at": "2026-08-02T19:58:42Z"
 }
