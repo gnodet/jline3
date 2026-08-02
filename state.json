@@ -4,10 +4,10 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-02T17:45:14Z",
+    "timestamp": "2026-08-02T17:48:03Z",
     "prs_checked": 1,
-    "reviews_posted": 1,
-    "tokens_estimate": 58000
+    "reviews_posted": 0,
+    "tokens_estimate": 1500
   },
   "reviewed_prs": [
     {
@@ -269,17 +269,22 @@
       "number": 2136,
       "title": "fix: strip control characters from ssh banner and prompts (3.x backport)",
       "author": "gnodet",
-      "reviewed_at": "2026-08-02T17:45:12Z",
+      "reviewed_at": "2026-08-02T17:48:01Z",
       "verdict": "APPROVE",
-      "notes": "Clean backport of #2129 to jline-3.x, identical fix and tests, copyright header adapted to 3.x convention",
+      "notes": "SonarCloud bot comment only (QG passed), no re-review needed",
       "interactions": [
         {
           "at": "2026-08-02T17:45:12Z",
           "verdict": "APPROVE",
           "notes": "Clean backport of #2129 to jline-3.x, identical fix and tests, copyright header adapted to 3.x convention"
+        },
+        {
+          "at": "2026-08-02T17:48:01Z",
+          "verdict": "APPROVE",
+          "notes": "SonarCloud bot comment only (QG passed), no re-review needed"
         }
       ],
-      "review_count": 1
+      "review_count": 2
     }
   ],
   "skipped_prs": [
@@ -309,5 +314,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-02T17:42:31Z"
+  "last_reviewed_updated_at": "2026-08-02T17:45:14Z"
 }
