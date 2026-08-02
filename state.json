@@ -4,27 +4,32 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-02T18:05:21Z",
+    "timestamp": "2026-08-02T19:24:28Z",
     "prs_checked": 1,
-    "reviews_posted": 1,
-    "tokens_estimate": 52000
+    "reviews_posted": 0,
+    "tokens_estimate": 1500
   },
   "reviewed_prs": [
     {
       "number": 2007,
       "title": "feat: add Kitty Keyboard Protocol support",
       "author": "gnodet",
-      "reviewed_at": "2026-07-22T15:30:23Z",
+      "reviewed_at": "2026-08-02T19:24:26Z",
       "verdict": "COMMENT",
-      "notes": "PUA codepoint mismatch for HOME/END keys (verified against kitty spec)",
+      "notes": "Community comment (crramirez: Windows Terminal 1.25 testing note), no code changes, no re-review needed",
       "interactions": [
         {
           "at": "2026-07-22T15:30:23Z",
           "verdict": "COMMENT",
           "notes": "PUA codepoint mismatch for HOME/END keys (verified against kitty spec)"
+        },
+        {
+          "at": "2026-08-02T19:24:26Z",
+          "verdict": "COMMENT",
+          "notes": "Community comment (crramirez: Windows Terminal 1.25 testing note), no code changes, no re-review needed"
         }
       ],
-      "review_count": 1
+      "review_count": 2
     },
     {
       "number": 2021,
@@ -319,5 +324,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-02T18:03:04Z"
+  "last_reviewed_updated_at": "2026-08-02T19:22:57Z"
 }
