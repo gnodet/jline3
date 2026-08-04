@@ -4,7 +4,7 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-03T14:26:17Z",
+    "timestamp": "2026-08-04T13:21:01Z",
     "prs_checked": 1,
     "reviews_posted": 1,
     "tokens_estimate": 0
@@ -343,6 +343,22 @@
         }
       ],
       "review_count": 1
+    },
+    {
+      "number": 2141,
+      "title": "fix: reimplement FFM signal handling with self-pipe trick (fixes #2139)",
+      "author": "gnodet",
+      "reviewed_at": "2026-08-04T13:21:00Z",
+      "verdict": "COMMENT",
+      "notes": "Self-pipe reimplementation of FFM signal handling. One minor race in dispatcher thread lifecycle (non-blocking). Approved with comment.",
+      "interactions": [
+        {
+          "at": "2026-08-04T13:21:00Z",
+          "verdict": "COMMENT",
+          "notes": "Self-pipe reimplementation of FFM signal handling. One minor race in dispatcher thread lifecycle (non-blocking). Approved with comment."
+        }
+      ],
+      "review_count": 1
     }
   ],
   "skipped_prs": [
@@ -372,5 +388,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-03T14:21:53Z"
+  "last_reviewed_updated_at": "2026-08-04T13:06:38Z"
 }
