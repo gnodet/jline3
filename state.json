@@ -4,10 +4,10 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-08T08:44:20Z",
+    "timestamp": "2026-08-08T12:01:30Z",
     "prs_checked": 1,
     "reviews_posted": 1,
-    "tokens_estimate": 54000
+    "tokens_estimate": 64000
   },
   "reviewed_prs": [
     {
@@ -433,6 +433,22 @@
         }
       ],
       "review_count": 1
+    },
+    {
+      "number": 2156,
+      "title": "fix: strip control characters from Less status messages",
+      "author": "uchiha-bug-hunter",
+      "reviewed_at": "2026-08-08T12:01:28Z",
+      "verdict": "APPROVE",
+      "notes": "Security fix: sanitizes Less status line via stripControlChars() to prevent terminal escape injection via crafted filenames",
+      "interactions": [
+        {
+          "at": "2026-08-08T12:01:28Z",
+          "verdict": "APPROVE",
+          "notes": "Security fix: sanitizes Less status line via stripControlChars() to prevent terminal escape injection via crafted filenames"
+        }
+      ],
+      "review_count": 1
     }
   ],
   "skipped_prs": [
@@ -462,5 +478,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-08T08:41:45Z"
+  "last_reviewed_updated_at": "2026-08-08T11:57:34Z"
 }
