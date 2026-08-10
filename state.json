@@ -4,10 +4,10 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-10T11:06:10Z",
+    "timestamp": "2026-08-10T12:41:09Z",
     "prs_checked": 1,
     "reviews_posted": 1,
-    "tokens_estimate": 54556
+    "tokens_estimate": 66506
   },
   "reviewed_prs": [
     {
@@ -459,6 +459,22 @@
         }
       ],
       "review_count": 2
+    },
+    {
+      "number": 2157,
+      "title": "fix: emit full code points when rendering tmux panes",
+      "author": "uchiha-bug-hunter",
+      "reviewed_at": "2026-08-10T12:41:07Z",
+      "verdict": "APPROVE",
+      "notes": "Security/correctness fix: supplementary Unicode code points truncated to char could inject ESC into outer terminal. Clean one-line fix consistent with SwingTerminal/ScreenTerminal patterns.",
+      "interactions": [
+        {
+          "at": "2026-08-10T12:41:07Z",
+          "verdict": "APPROVE",
+          "notes": "Security/correctness fix: supplementary Unicode code points truncated to char could inject ESC into outer terminal. Clean one-line fix consistent with SwingTerminal/ScreenTerminal patterns."
+        }
+      ],
+      "review_count": 1
     }
   ],
   "skipped_prs": [
@@ -488,5 +504,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-10T11:03:54Z"
+  "last_reviewed_updated_at": "2026-08-10T12:36:55Z"
 }
