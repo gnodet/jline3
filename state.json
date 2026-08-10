@@ -4,10 +4,10 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-10T12:41:09Z",
+    "timestamp": "2026-08-10T21:14:22Z",
     "prs_checked": 1,
     "reviews_posted": 1,
-    "tokens_estimate": 66506
+    "tokens_estimate": 59532
   },
   "reviewed_prs": [
     {
@@ -427,17 +427,22 @@
       "number": 2153,
       "title": "Revert maven-user.properties source-archive workaround",
       "author": "gnodet",
-      "reviewed_at": "2026-08-08T08:44:18Z",
+      "reviewed_at": "2026-08-10T21:14:20Z",
       "verdict": "APPROVE",
-      "notes": "Own PR, posted as COMMENT. Clean revert of #2151 (Maven 4-only workaround breaks Maven 3). Low-sev: title missing type: prefix",
+      "notes": "Own PR, posted as COMMENT. Evolved from simple revert to proper replacement: nisse.properties fallback instead of Maven 4-only maven-user.properties. Maven 3+4 compatible.",
       "interactions": [
         {
           "at": "2026-08-08T08:44:18Z",
           "verdict": "APPROVE",
           "notes": "Own PR, posted as COMMENT. Clean revert of #2151 (Maven 4-only workaround breaks Maven 3). Low-sev: title missing type: prefix"
+        },
+        {
+          "at": "2026-08-10T21:14:20Z",
+          "verdict": "APPROVE",
+          "notes": "Own PR, posted as COMMENT. Evolved from simple revert to proper replacement: nisse.properties fallback instead of Maven 4-only maven-user.properties. Maven 3+4 compatible."
         }
       ],
-      "review_count": 1
+      "review_count": 2
     },
     {
       "number": 2156,
@@ -504,5 +509,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-10T12:36:55Z"
+  "last_reviewed_updated_at": "2026-08-10T21:09:54Z"
 }
