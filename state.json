@@ -4,10 +4,10 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-11T06:40:34Z",
+    "timestamp": "2026-08-11T20:36:12Z",
     "prs_checked": 1,
     "reviews_posted": 1,
-    "tokens_estimate": 55145
+    "tokens_estimate": 78061
   },
   "reviewed_prs": [
     {
@@ -485,6 +485,22 @@
         }
       ],
       "review_count": 2
+    },
+    {
+      "number": 2163,
+      "title": "feat: add AttributedStringBuilder.appendCodePoint(int)",
+      "author": "gnodet",
+      "reviewed_at": "2026-08-11T20:36:10Z",
+      "verdict": "APPROVE",
+      "notes": "Own PR, posted as COMMENT. Follow-up to #2157 review suggestion. Clean appendCodePoint impl with BMP delegation and direct supplementary write. Thorough tests.",
+      "interactions": [
+        {
+          "at": "2026-08-11T20:36:10Z",
+          "verdict": "APPROVE",
+          "notes": "Own PR, posted as COMMENT. Follow-up to #2157 review suggestion. Clean appendCodePoint impl with BMP delegation and direct supplementary write. Thorough tests."
+        }
+      ],
+      "review_count": 1
     }
   ],
   "skipped_prs": [
@@ -514,5 +530,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-11T06:38:36Z"
+  "last_reviewed_updated_at": "2026-08-11T20:30:05Z"
 }
