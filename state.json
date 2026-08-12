@@ -4,10 +4,10 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-11T20:36:12Z",
+    "timestamp": "2026-08-12T15:04:16Z",
     "prs_checked": 1,
     "reviews_posted": 1,
-    "tokens_estimate": 78061
+    "tokens_estimate": 63484
   },
   "reviewed_prs": [
     {
@@ -501,6 +501,22 @@
         }
       ],
       "review_count": 1
+    },
+    {
+      "number": 2164,
+      "title": "fix: escape IAC byte in the telnet data output stream",
+      "author": "uchiha-bug-hunter",
+      "reviewed_at": "2026-08-12T15:04:15Z",
+      "verdict": "APPROVE",
+      "notes": "Security fix: RFC 854-compliant IAC byte escaping prevents telnet command injection. Symmetric with existing read-side un-escaping. closeOutput() correctly moved to rawWrite().",
+      "interactions": [
+        {
+          "at": "2026-08-12T15:04:15Z",
+          "verdict": "APPROVE",
+          "notes": "Security fix: RFC 854-compliant IAC byte escaping prevents telnet command injection. Symmetric with existing read-side un-escaping. closeOutput() correctly moved to rawWrite()."
+        }
+      ],
+      "review_count": 1
     }
   ],
   "skipped_prs": [
@@ -530,5 +546,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-11T20:30:05Z"
+  "last_reviewed_updated_at": "2026-08-12T14:59:44Z"
 }
