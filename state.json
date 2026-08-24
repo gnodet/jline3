@@ -4,10 +4,10 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-24T12:28:30Z",
+    "timestamp": "2026-08-24T12:43:59Z",
     "prs_checked": 2,
     "reviews_posted": 2,
-    "tokens_estimate": 134000
+    "tokens_estimate": 106000
   },
   "reviewed_prs": [
     {
@@ -527,9 +527,9 @@
       "number": 2167,
       "title": "mask password value in DefaultPrompter result display",
       "author": "uchiha-bug-hunter",
-      "reviewed_at": "2026-08-18T12:47:24Z",
+      "reviewed_at": "2026-08-24T12:43:58Z",
       "verdict": "APPROVE",
-      "notes": "Re-review: null-mask normalization moved before readLine to prevent cleartext echo during typing. Security gap closed, well-tested.",
+      "notes": "Re-review: maintainer squashed SonarCloud fixes + toString leak fix onto branch. All correct.",
       "interactions": [
         {
           "at": "2026-08-16T17:18:08Z",
@@ -545,25 +545,35 @@
           "at": "2026-08-18T12:47:24Z",
           "verdict": "APPROVE",
           "notes": "Re-review: null-mask normalization moved before readLine to prevent cleartext echo during typing. Security gap closed, well-tested."
+        },
+        {
+          "at": "2026-08-24T12:43:58Z",
+          "verdict": "APPROVE",
+          "notes": "Re-review: maintainer squashed SonarCloud fixes + toString leak fix onto branch. All correct."
         }
       ],
-      "review_count": 3
+      "review_count": 4
     },
     {
       "number": 2172,
       "title": "fix: preserve termios baud rate when setting attributes (#2170)",
       "author": "arimu1",
-      "reviewed_at": "2026-08-22T04:35:11Z",
+      "reviewed_at": "2026-08-24T12:43:58Z",
       "verdict": "APPROVE",
-      "notes": "Well-designed fix for serial terminal baud rate preservation. Clean applyMappedFlags algorithm, correct POSIX read-modify-write pattern, thorough cross-platform tests.",
+      "notes": "Re-review: new commit adds FFM native return-code checking with differentiated error handling (throw for reads, log for writes).",
       "interactions": [
         {
           "at": "2026-08-22T04:35:11Z",
           "verdict": "APPROVE",
           "notes": "Well-designed fix for serial terminal baud rate preservation. Clean applyMappedFlags algorithm, correct POSIX read-modify-write pattern, thorough cross-platform tests."
+        },
+        {
+          "at": "2026-08-24T12:43:58Z",
+          "verdict": "APPROVE",
+          "notes": "Re-review: new commit adds FFM native return-code checking with differentiated error handling (throw for reads, log for writes)."
         }
       ],
-      "review_count": 1
+      "review_count": 2
     },
     {
       "number": 2173,
@@ -678,5 +688,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-24T12:15:25Z"
+  "last_reviewed_updated_at": "2026-08-24T12:35:05Z"
 }
