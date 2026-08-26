@@ -4,10 +4,10 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-26T09:59:09Z",
-    "prs_checked": 3,
-    "reviews_posted": 3,
-    "tokens_estimate": 174000
+    "timestamp": "2026-08-26T10:12:57Z",
+    "prs_checked": 1,
+    "reviews_posted": 0,
+    "tokens_estimate": 5000
   },
   "reviewed_prs": [
     {
@@ -810,17 +810,22 @@
       "number": 2195,
       "title": "fix: handle IOError in BindingReader gracefully instead of crashing (fixes #2155)",
       "author": "gnodet",
-      "reviewed_at": "2026-08-26T09:59:09Z",
+      "reviewed_at": "2026-08-26T10:12:57Z",
       "verdict": "APPROVE",
-      "notes": "IOException\u2192EndOfFileException instead of IOError. Prevents app crashes. Backport to 4.0.x and jline-3.x suggested.",
+      "notes": "Javadoc-only follow-up commit. SonarCloud QG passed. No new review posted.",
       "interactions": [
         {
           "at": "2026-08-26T09:59:09Z",
           "verdict": "APPROVE",
           "notes": "IOException\u2192EndOfFileException instead of IOError. Prevents app crashes. Backport to 4.0.x and jline-3.x suggested."
+        },
+        {
+          "at": "2026-08-26T10:12:57Z",
+          "verdict": "APPROVE",
+          "notes": "Javadoc-only follow-up commit. SonarCloud QG passed. No new review posted."
         }
       ],
-      "review_count": 1
+      "review_count": 2
     },
     {
       "number": 2196,
@@ -866,5 +871,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-26T09:51:56Z"
+  "last_reviewed_updated_at": "2026-08-26T10:08:12Z"
 }
