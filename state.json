@@ -4,7 +4,7 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-26T05:44:19Z",
+    "timestamp": "2026-08-26T06:29:30Z",
     "prs_checked": 1,
     "reviews_posted": 0,
     "tokens_estimate": 5000
@@ -363,9 +363,9 @@
       "number": 2141,
       "title": "fix: reimplement FFM signal handling with self-pipe trick (fixes #2139)",
       "author": "gnodet",
-      "reviewed_at": "2026-08-26T05:44:19Z",
+      "reviewed_at": "2026-08-26T06:29:30Z",
       "verdict": "APPROVE",
-      "notes": "Force-push squash (multiple commits \u2192 1) in prep for merge. Same diff, SonarCloud QG passed. No new review posted.",
+      "notes": "Another force-push (1-line delta, 699\u2192698 additions). SonarCloud QG passed. No new review posted.",
       "interactions": [
         {
           "at": "2026-08-04T13:21:00Z",
@@ -386,9 +386,14 @@
           "at": "2026-08-26T05:44:19Z",
           "verdict": "APPROVE",
           "notes": "Force-push squash (multiple commits \u2192 1) in prep for merge. Same diff, SonarCloud QG passed. No new review posted."
+        },
+        {
+          "at": "2026-08-26T06:29:30Z",
+          "verdict": "APPROVE",
+          "notes": "Another force-push (1-line delta, 699\u2192698 additions). SonarCloud QG passed. No new review posted."
         }
       ],
-      "review_count": 4
+      "review_count": 5
     },
     {
       "number": 2148,
@@ -776,5 +781,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-26T05:43:07Z"
+  "last_reviewed_updated_at": "2026-08-26T06:26:35Z"
 }
