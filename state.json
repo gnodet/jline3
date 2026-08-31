@@ -4,7 +4,7 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-31T12:59:55Z",
+    "timestamp": "2026-08-31T13:37:08Z",
     "prs_checked": 1,
     "reviews_posted": 0,
     "tokens_estimate": 2000
@@ -986,9 +986,9 @@
       "number": 2210,
       "title": "fix: skip terminal mode probing on PosixPtyTerminal (fixes #2209)",
       "author": "gnodet",
-      "reviewed_at": "2026-08-31T12:59:51Z",
+      "reviewed_at": "2026-08-31T13:37:07Z",
       "verdict": "APPROVE",
-      "notes": "Re-review: test-only change \u2014 BlockingReader interrupt/close behavior tests updated. SonarCloud QG passed. No re-review needed.",
+      "notes": "Re-review: test file renamed PosixPtyTerminalProbeSkipTest \u2192 TerminalProbeTimeoutTest per our suggestion. PR title also updated. All review feedback adopted across 6 commits. SonarCloud QG passed. No re-review needed.",
       "interactions": [
         {
           "at": "2026-08-31T09:05:16Z",
@@ -1014,9 +1014,14 @@
           "at": "2026-08-31T12:59:51Z",
           "verdict": "APPROVE",
           "notes": "Re-review: test-only change \u2014 BlockingReader interrupt/close behavior tests updated. SonarCloud QG passed. No re-review needed."
+        },
+        {
+          "at": "2026-08-31T13:37:07Z",
+          "verdict": "APPROVE",
+          "notes": "Re-review: test file renamed PosixPtyTerminalProbeSkipTest \u2192 TerminalProbeTimeoutTest per our suggestion. PR title also updated. All review feedback adopted across 6 commits. SonarCloud QG passed. No re-review needed."
         }
       ],
-      "review_count": 5
+      "review_count": 6
     }
   ],
   "skipped_prs": [
@@ -1046,5 +1051,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-31T12:54:59Z"
+  "last_reviewed_updated_at": "2026-08-31T13:34:44Z"
 }
