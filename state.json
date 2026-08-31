@@ -4,10 +4,10 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-31T08:05:09Z",
+    "timestamp": "2026-08-31T08:40:41Z",
     "prs_checked": 1,
-    "reviews_posted": 1,
-    "tokens_estimate": 82746
+    "reviews_posted": 0,
+    "tokens_estimate": 3000
   },
   "reviewed_prs": [
     {
@@ -960,17 +960,22 @@
       "number": 2200,
       "title": "strip control characters from file names in posix builtins",
       "author": "uchiha-bug-hunter",
-      "reviewed_at": "2026-08-31T08:05:07Z",
+      "reviewed_at": "2026-08-31T08:40:39Z",
       "verdict": "APPROVE",
-      "notes": "Security fix: strips ISO control chars from filesystem-derived names in ls/head/tail/wc/grep. Noted unsanitized ls directory header (line 1971) and missing wc/tail test coverage. Backport to 4.0.x recommended.",
+      "notes": "Re-review: trivial formatting refactor (extract variable in wc printf). SonarCloud QG passed. No re-review needed.",
       "interactions": [
         {
           "at": "2026-08-31T08:05:07Z",
           "verdict": "APPROVE",
           "notes": "Security fix: strips ISO control chars from filesystem-derived names in ls/head/tail/wc/grep. Noted unsanitized ls directory header (line 1971) and missing wc/tail test coverage. Backport to 4.0.x recommended."
+        },
+        {
+          "at": "2026-08-31T08:40:39Z",
+          "verdict": "APPROVE",
+          "notes": "Re-review: trivial formatting refactor (extract variable in wc printf). SonarCloud QG passed. No re-review needed."
         }
       ],
-      "review_count": 1
+      "review_count": 2
     }
   ],
   "skipped_prs": [
@@ -1000,5 +1005,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-31T07:54:16Z"
+  "last_reviewed_updated_at": "2026-08-31T08:38:48Z"
 }
