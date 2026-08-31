@@ -4,10 +4,10 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-31T13:37:08Z",
+    "timestamp": "2026-08-31T15:31:24Z",
     "prs_checked": 1,
-    "reviews_posted": 0,
-    "tokens_estimate": 2000
+    "reviews_posted": 1,
+    "tokens_estimate": 86951
   },
   "reviewed_prs": [
     {
@@ -1022,6 +1022,22 @@
         }
       ],
       "review_count": 6
+    },
+    {
+      "number": 2212,
+      "title": "fix: prevent first-line scroll on non-xenl terminals (fixes #2206)",
+      "author": "gnodet",
+      "reviewed_at": "2026-08-31T15:31:22Z",
+      "verdict": "APPROVE",
+      "notes": "LGTM. Fixes first-line scroll regression on windows-vtp. Two-part fix: blank-row seeding after clear_screen + last-row truncation on non-xenl. Inline suggestion: simplify Arrays.fill import. Non-blocking: CJK double-width edge case, test coverage for clear() path.",
+      "interactions": [
+        {
+          "at": "2026-08-31T15:31:22Z",
+          "verdict": "APPROVE",
+          "notes": "LGTM. Fixes first-line scroll regression on windows-vtp. Two-part fix: blank-row seeding after clear_screen + last-row truncation on non-xenl. Inline suggestion: simplify Arrays.fill import. Non-blocking: CJK double-width edge case, test coverage for clear() path."
+        }
+      ],
+      "review_count": 1
     }
   ],
   "skipped_prs": [
@@ -1051,5 +1067,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-31T13:34:44Z"
+  "last_reviewed_updated_at": "2026-08-31T15:23:46Z"
 }
