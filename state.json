@@ -4,10 +4,10 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-31T09:05:18Z",
+    "timestamp": "2026-08-31T09:50:50Z",
     "prs_checked": 1,
     "reviews_posted": 1,
-    "tokens_estimate": 82855
+    "tokens_estimate": 91434
   },
   "reviewed_prs": [
     {
@@ -986,17 +986,22 @@
       "number": 2210,
       "title": "fix: skip terminal mode probing on PosixPtyTerminal (fixes #2209)",
       "author": "gnodet",
-      "reviewed_at": "2026-08-31T09:05:16Z",
+      "reviewed_at": "2026-08-31T09:50:48Z",
       "verdict": "APPROVE",
-      "notes": "LGTM. Template method prevents indefinite hang on PTY with no emulator. NO_RESPONSE semantic prevents secondary fallback hang. Posted as COMMENT (can't APPROVE own PR). Backport to 4.0.x recommended if mode probing exists there.",
+      "notes": "Re-review: approach changed from canProbeTerminalModes override to daemon thread hard-timeout. Sound design: preserves probing for real emulators, times out gracefully for bare PTY. Thread safety correct. Non-blocking: test file name, saturating arithmetic, late-thread race guard.",
       "interactions": [
         {
           "at": "2026-08-31T09:05:16Z",
           "verdict": "APPROVE",
           "notes": "LGTM. Template method prevents indefinite hang on PTY with no emulator. NO_RESPONSE semantic prevents secondary fallback hang. Posted as COMMENT (can't APPROVE own PR). Backport to 4.0.x recommended if mode probing exists there."
+        },
+        {
+          "at": "2026-08-31T09:50:48Z",
+          "verdict": "APPROVE",
+          "notes": "Re-review: approach changed from canProbeTerminalModes override to daemon thread hard-timeout. Sound design: preserves probing for real emulators, times out gracefully for bare PTY. Thread safety correct. Non-blocking: test file name, saturating arithmetic, late-thread race guard."
         }
       ],
-      "review_count": 1
+      "review_count": 2
     }
   ],
   "skipped_prs": [
@@ -1026,5 +1031,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-31T08:59:06Z"
+  "last_reviewed_updated_at": "2026-08-31T09:41:16Z"
 }
