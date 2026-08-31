@@ -4,9 +4,9 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-31T15:38:34Z",
-    "prs_checked": 1,
-    "reviews_posted": 1,
+    "timestamp": "2026-08-31T16:16:08Z",
+    "prs_checked": 2,
+    "reviews_posted": 2,
     "tokens_estimate": 0
   },
   "reviewed_prs": [
@@ -1027,33 +1027,43 @@
       "number": 2212,
       "title": "fix: prevent first-line scroll on non-xenl terminals (fixes #2206)",
       "author": "gnodet",
-      "reviewed_at": "2026-08-31T15:31:22Z",
+      "reviewed_at": "2026-08-31T16:16:04Z",
       "verdict": "APPROVE",
-      "notes": "LGTM. Fixes first-line scroll regression on windows-vtp. Two-part fix: blank-row seeding after clear_screen + last-row truncation on non-xenl. Inline suggestion: simplify Arrays.fill import. Non-blocking: CJK double-width edge case, test coverage for clear() path.",
+      "notes": "Re-review: all prior feedback adopted. CJK column-aware truncation via columnSubSequence, clear() test path, Arrays.fill simplification. Ready to merge.",
       "interactions": [
         {
           "at": "2026-08-31T15:31:22Z",
           "verdict": "APPROVE",
           "notes": "LGTM. Fixes first-line scroll regression on windows-vtp. Two-part fix: blank-row seeding after clear_screen + last-row truncation on non-xenl. Inline suggestion: simplify Arrays.fill import. Non-blocking: CJK double-width edge case, test coverage for clear() path."
+        },
+        {
+          "at": "2026-08-31T16:16:04Z",
+          "verdict": "APPROVE",
+          "notes": "Re-review: all prior feedback adopted. CJK column-aware truncation via columnSubSequence, clear() test path, Arrays.fill simplification. Ready to merge."
         }
       ],
-      "review_count": 1
+      "review_count": 2
     },
     {
       "number": 2211,
       "title": "fix: append suffix to buffer when not part of candidate value (fixes #2208)",
       "author": "gnodet",
-      "reviewed_at": "2026-08-31T15:38:32Z",
+      "reviewed_at": "2026-08-31T16:16:06Z",
       "verdict": "APPROVE",
-      "notes": "Bug fix: completion suffix not in candidate value causes last char(s) to be dropped. Clean fix with endsWith guard. Backport to 4.0.x recommended.",
+      "notes": "Re-review: ordering fix (complete() after suffix), duplicate suffix prevention, new testSuffixWithComplete. Backport to 4.0.x still recommended.",
       "interactions": [
         {
           "at": "2026-08-31T15:38:32Z",
           "verdict": "APPROVE",
           "notes": "Bug fix: completion suffix not in candidate value causes last char(s) to be dropped. Clean fix with endsWith guard. Backport to 4.0.x recommended."
+        },
+        {
+          "at": "2026-08-31T16:16:06Z",
+          "verdict": "APPROVE",
+          "notes": "Re-review: ordering fix (complete() after suffix), duplicate suffix prevention, new testSuffixWithComplete. Backport to 4.0.x still recommended."
         }
       ],
-      "review_count": 1
+      "review_count": 2
     }
   ],
   "skipped_prs": [
@@ -1083,5 +1093,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-31T15:26:13Z"
+  "last_reviewed_updated_at": "2026-08-31T16:02:50Z"
 }
