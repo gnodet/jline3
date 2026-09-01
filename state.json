@@ -4,9 +4,9 @@
   "project_name": "JLine3",
   "loop_type": "review-loop",
   "last_run": {
-    "timestamp": "2026-08-31T16:16:08Z",
-    "prs_checked": 2,
-    "reviews_posted": 2,
+    "timestamp": "2026-09-01T03:55:14Z",
+    "prs_checked": 1,
+    "reviews_posted": 1,
     "tokens_estimate": 0
   },
   "reviewed_prs": [
@@ -1064,6 +1064,22 @@
         }
       ],
       "review_count": 2
+    },
+    {
+      "number": 2218,
+      "title": "fix: add mouse support capability to Windows terminal types (fixes #2217)",
+      "author": "gnodet",
+      "reviewed_at": "2026-09-01T03:55:12Z",
+      "verdict": "APPROVE",
+      "notes": "Missing kmous=\\E[M in all 4 Windows .caps files. Clean fix with test. Backport to 4.0.x and jline-3.x recommended.",
+      "interactions": [
+        {
+          "at": "2026-09-01T03:55:12Z",
+          "verdict": "APPROVE",
+          "notes": "Missing kmous=\\E[M in all 4 Windows .caps files. Clean fix with test. Backport to 4.0.x and jline-3.x recommended."
+        }
+      ],
+      "review_count": 1
     }
   ],
   "skipped_prs": [
@@ -1093,5 +1109,5 @@
   "escalated": [],
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
-  "last_reviewed_updated_at": "2026-08-31T16:02:50Z"
+  "last_reviewed_updated_at": "2026-09-01T03:49:46Z"
 }
