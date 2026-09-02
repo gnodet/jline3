@@ -1085,18 +1085,23 @@
       "number": 2221,
       "title": "fix: use SGR mouse encoding on Windows to avoid corruption at column >= 96",
       "author": "gnodet",
-      "reviewed_at": "2026-09-02T04:22:22Z",
+      "reviewed_at": "2026-09-02T05:47:59Z",
       "verdict": "APPROVE",
-      "notes": "Bug fix: X10\u2192SGR mouse encoding on Windows. Good tests at boundary. Backport to 4.0.x suggested.",
+      "notes": "Re-review: 3 new commits complete refactoring (full logic extraction to base class, overlapping-button tracking, edge case handling). LGTM.",
       "interactions": [
         {
           "at": "2026-09-02T04:22:22Z",
           "verdict": "APPROVE",
           "notes": "Bug fix: X10\u2192SGR mouse encoding on Windows. Good tests at boundary. Backport to 4.0.x suggested."
+        },
+        {
+          "at": "2026-09-02T05:47:59Z",
+          "verdict": "APPROVE",
+          "notes": "Re-review: 3 new commits complete refactoring (full logic extraction to base class, overlapping-button tracking, edge case handling). LGTM."
         }
       ],
-      "review_count": 1,
-      "head_sha": "5cec0a46b28b961057c38696bc8ac1383cc54508"
+      "review_count": 2,
+      "head_sha": "ed26610a5d0168b2c42ed412fd5e3814cbfe7002"
     }
   ],
   "skipped_prs": [
@@ -1127,13 +1132,5 @@
   "resolved": [],
   "created_at": "2026-07-22T15:18:23Z",
   "last_reviewed_updated_at": "2026-09-02T04:13:36Z",
-  "deferred_prs": [
-    {
-      "number": 2221,
-      "reason": "ci_pending",
-      "deferred_at": "2026-09-02T04:37:17Z",
-      "last_checked": "2026-09-02T04:37:17Z",
-      "check_count": 1
-    }
-  ]
+  "deferred_prs": []
 }
