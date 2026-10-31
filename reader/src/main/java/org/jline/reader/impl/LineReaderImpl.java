@@ -594,6 +594,7 @@ public class LineReaderImpl implements LineReader, Flushable {
         // maskingCallback may be null
         // buffer may be null
         if (!commandsBuffer.isEmpty()) {
+            this.maskingCallback = maskingCallback;
             String cmd = commandsBuffer.remove(0);
             boolean done = false;
             do {
@@ -1256,10 +1257,19 @@ public class LineReaderImpl implements LineReader, Flushable {
         return finish(buf.toString());
     }
 
+    /**
+     * Masked input is a secret (a password or passphrase) and must be returned exactly as
+     * typed, so history event expansion and the matching backslash unescaping only apply
+     * when no masking callback is active.
+     */
+    private boolean isEventExpansionEnabled() {
+        return !isSet(Option.DISABLE_EVENT_EXPANSION) && maskingCallback == null;
+    }
+
     protected String finish(String str) {
         String historyLine = str;
 
-        if (!isSet(Option.DISABLE_EVENT_EXPANSION)) {
+        if (isEventExpansionEnabled()) {
             StringBuilder sb = new StringBuilder();
             boolean escaped = false;
             for (int i = 0; i < str.length(); i++) {
@@ -3128,7 +3138,7 @@ public class LineReaderImpl implements LineReader, Flushable {
     protected boolean acceptLine() {
         parsedLine = null;
         int curPos = 0;
-        if (!isSet(Option.DISABLE_EVENT_EXPANSION)) {
+        if (isEventExpansionEnabled()) {
             try {
                 String str = buf.toString();
                 String exp = expander.expandHistory(history, str);
@@ -4489,6 +4499,9 @@ public class LineReaderImpl implements LineReader, Flushable {
     }
 
     protected boolean expandHistory() {
+        if (!isEventExpansionEnabled()) {
+            return false;
+        }
         String str = buf.toString();
         String exp = expander.expandHistory(history, str);
         if (!exp.equals(str)) {
@@ -4590,7 +4603,7 @@ public class LineReaderImpl implements LineReader, Flushable {
         }
         // Try to expand history first
         // If there is actually an expansion, bail out now
-        if (!isSet(Option.DISABLE_EVENT_EXPANSION)) {
+        if (isEventExpansionEnabled()) {
             try {
                 if (expandHistory()) {
                     return true;
