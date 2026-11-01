@@ -20,7 +20,7 @@
 known_targets := Linux-x86 Linux-x86_64 Linux-arm Linux-armv6 Linux-armv7 Linux-android-arm Linux-arm64 Linux-ppc64 Linux-riscv64 Linux-musl-x86_64 Linux-musl-arm64 Mac-x86_64 Mac-arm64 DragonFly-x86_64 FreeBSD-x86_64 OpenBSD-x86_64 Windows-x86 Windows-x86_64 Windows-arm64 SunOS-sparcv9 HPUX-ia64_32
 target := $(OS_NAME)-$(OS_ARCH)
 
-ifeq (,$(findstring $(strip $(target)),$(known_targets)))
+ifeq (,$(filter $(strip $(target)),$(known_targets)))
   target := Default
 endif
 

@@ -210,7 +210,7 @@ cd native
 make sign
 ```
 
-This signs all three macOS architectures (x86, x86\_64, arm64) with the
+This signs both macOS architectures (x86\_64, arm64) with the
 Developer ID certificate. The signing identity defaults to the one configured
 in the Makefile and can be overridden:
 
