@@ -846,7 +846,8 @@ public class AttributedStringBuilder extends AttributedCharSequence implements A
                 // as the single-character 8-bit C1 form (U+009D, U+0090, U+0098, U+009E, U+009F).
                 // The 8-bit C1 form is also recognised when ansiState == 1 (after ESC): ESC followed
                 // by a C1 string-introducer consumes both bytes instead of emitting the pending ESC.
-                // These carry a string payload terminated by BEL or ST (ESC \) and can drive the
+                // These carry a string payload terminated by ST (ESC \\ or U+009C) — and for OSC
+                // additionally by BEL (xterm convention) — and can drive the
                 // terminal itself (set the window title, write the clipboard via OSC 52, ...). When
                 // the text is untrusted (a file shown in Less, a completion candidate) that payload
                 // must not reach the terminal, so drop the whole sequence instead of emitting it.
