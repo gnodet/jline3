@@ -3781,7 +3781,7 @@ public class LineReaderImpl implements LineReader, Flushable {
         boolean out = true;
         File file = null;
         try {
-            file = File.createTempFile("jline-execute-", null);
+            file = ReaderUtils.createSecureTempFile("jline-execute-", null);
             try (FileWriter writer = new FileWriter(file)) {
                 writer.write(buf.toString());
             }
@@ -5509,7 +5509,7 @@ public class LineReaderImpl implements LineReader, Flushable {
                     strings.add(group);
                 }
                 List<Candidate> candidates = entry.getValue();
-                Collections.sort(candidates);
+                candidates.sort(null);
                 strings.add(candidates);
                 if (ordered != null) {
                     ordered.addAll(candidates);
@@ -5528,7 +5528,7 @@ public class LineReaderImpl implements LineReader, Flushable {
             if (autoGroup) {
                 strings.addAll(groups);
             }
-            Collections.sort(sorted);
+            sorted.sort(null);
             strings.add(sorted);
             if (ordered != null) {
                 ordered.addAll(sorted);
