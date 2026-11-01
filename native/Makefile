@@ -86,7 +86,7 @@ native-all: \
     linux-x86 linux-x86_64 linux-arm linux-armv6 linux-armv7 linux-arm64 linux-ppc64 \
     linux-musl-x86_64 linux-musl-arm64 \
     win-x86 win-x86_64 win-arm64 \
-    mac-x86 mac-x86_64 mac-arm64 \
+    mac-x86_64 mac-arm64 \
     freebsd-x86 freebsd-x86_64
 
 # Sign macOS native libraries with Apple Developer ID.
@@ -97,7 +97,7 @@ NATIVE_MAC_DIR := src/main/resources/org/jline/nativ/Mac
 
 sign:
 	@set -e; \
-	for arch in x86 x86_64 arm64; do \
+	for arch in x86_64 arm64; do \
 		lib="$(NATIVE_MAC_DIR)/$$arch/libjlinenative.jnilib"; \
 		if [ ! -f "$$lib" ]; then \
 			echo "ERROR: $$lib not found"; exit 1; \
@@ -109,7 +109,7 @@ sign:
 
 verify-sign:
 	@set -e; \
-	for arch in x86 x86_64 arm64; do \
+	for arch in x86_64 arm64; do \
 		lib="$(NATIVE_MAC_DIR)/$$arch/libjlinenative.jnilib"; \
 		if [ ! -f "$$lib" ]; then \
 			echo "ERROR: $$lib not found"; exit 1; \
@@ -191,10 +191,6 @@ target/dockcross/dockcross-windows-arm64: dockcross
 	chmod +x target/dockcross/dockcross-windows-arm64
 win-arm64: download-includes target/dockcross/dockcross-windows-arm64
 	target/dockcross/dockcross-windows-arm64 bash -c 'make clean-native native CROSS_PREFIX=aarch64-w64-mingw32- OS_NAME=Windows OS_ARCH=arm64'
-
-mac-x86: download-includes
-	docker run --rm -v $$PWD:/workdir --user $$(id -u):$$(id -g) \
-		-e CROSS_TRIPLE=i386-apple-darwin multiarch/crossbuild$(cross-build-digest) make clean-native native OS_NAME=Mac OS_ARCH=x86
 
 mac-x86_64: download-includes
 	docker run --rm -v $$PWD:/workdir --user $$(id -u):$$(id -g) \
